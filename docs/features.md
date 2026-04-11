@@ -71,7 +71,7 @@ swarm audit tree evt-abc123
 Audit events emit to a configurable sink (stdout, Redis Stream, or webhook). Opt-in at cluster, namespace, or agent level.
 
 - [Audit Trail](/observability/audit-trail) - full configuration guide, event schema, and CLI reference
-- [Budget Management](/advanced/budget-management) - per-action token tracking and cost attribution
+- [Budget Management](/scaling/budget-management) - per-action token tracking and cost attribution
 - [Custom Resources: SwarmRun](/custom-resources/) - run status field reference
 
 ---
@@ -94,7 +94,7 @@ spec:
 
 The operator creates KEDA ScaledObjects automatically. No KEDA YAML to write - just set the fields on your SwarmAgent.
 
-- [Autoscaling (KEDA)](/integrations/autoscaling) - full configuration guide and prerequisites
+- [Autoscaling (KEDA)](/scaling/autoscaling) - full configuration guide and prerequisites
 
 ---
 
@@ -167,7 +167,7 @@ spec:
 
 Budget alerts fire via Slack, email, or webhook before you hit the wall. Per-action token tracking in the audit trail lets you identify which tools and agents drive cost.
 
-- [Budget Management](/advanced/budget-management) - full configuration and enforcement modes
+- [Budget Management](/scaling/budget-management) - full configuration and enforcement modes
 - [Custom Resources: SwarmBudget](/custom-resources/) - budget field reference
 
 ---

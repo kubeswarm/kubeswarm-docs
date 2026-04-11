@@ -435,9 +435,9 @@ The audit trail complements - not replaces - existing observability signals.
 For full observability coverage, use the audit trail alongside OTel tracing and structured logging:
 
 - **OTel** for latency analysis and cross-service correlation
-- **Structured logging** for runtime debugging (see [Observability](/integrations/observability))
+- **Structured logging** for runtime debugging (see [Observability](/observability/overview))
 - **Audit trail** for behavior reconstruction, compliance, and cost attribution
-- **SwarmBudget** for aggregate spend limits (see [Budget Management](/advanced/budget-management))
+- **SwarmBudget** for aggregate spend limits (see [Budget Management](/scaling/budget-management))
 
 ---
 
@@ -460,7 +460,7 @@ Example: 50 agents, 10 tasks/hour each, `actions` mode, 7-day retention:
 - 500 tasks/hour * 5 events * 1.5 KB = 3.75 MB/hour
 - 3.75 MB * 168h = 630 MB + 30% headroom = ~820 MB
 
-For detailed sizing - including worked examples for verbose mode, split topologies, and the `maxDetailBytes` knob - see the [Redis in Production](/operations/redis-production#capacity-estimation) guide.
+For detailed sizing - including worked examples for verbose mode, split topologies, and the `maxDetailBytes` knob - see the [Redis in Production](/scaling/redis-production#capacity-estimation) guide.
 
 ---
 
