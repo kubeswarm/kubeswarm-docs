@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 sidebar_label: "Audit Trail"
 description: "kubeswarm audit trail - structured action log for agent behavior reconstruction, failure tracing, cost attribution, and compliance on Kubernetes."
 ---

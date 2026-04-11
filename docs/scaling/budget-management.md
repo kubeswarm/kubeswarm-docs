@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 sidebar_label: "Budget Management"
 description: "kubeswarm budget management - per-agent daily token limits and shared SwarmBudget for agent cost control on Kubernetes."
 ---
