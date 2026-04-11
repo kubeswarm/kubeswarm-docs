@@ -1,0 +1,25 @@
+name: Feature Request
+description: Suggest a docs improvement
+labels: ["feat"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's missing or could be improved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: coc
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I have read and agree to the [Code of Conduct](https://github.com/kubeswarm/kubeswarm/blob/main/CODE_OF_CONDUCT.md)
+          required: true

@@ -1,0 +1,109 @@
+name: Sync API Reference & Version Label
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "kubeswarm commit sha that triggered this run"
+        required: false
+  repository_dispatch:
+    types: [operator-released]
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: kubeswarm/kubeswarm
+          path: _source
+          ref: ${{ inputs.sha || '' }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: _source/go.mod
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # --- API Reference ---
+      - name: Install crd-ref-docs
+        run: cd _source && make crd-ref-docs
+
+      - name: Generate API reference
+        run: cd _source && DOCS_PATH=../docs/reference/api.md make docs-api
+
+      - name: Get source HEAD sha
+        id: source
+        run: echo "sha=$(git -C _source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # --- Version Label ---
+      - name: Resolve version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ github.event.client_payload.version || '' }}"
+          if [ -z "$version" ]; then
+            version=$(gh release view --repo kubeswarm/kubeswarm --json tagName --jq '.tagName')
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Update version label
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const version = process.env.VERSION.startsWith("v") ? process.env.VERSION : "v" + process.env.VERSION;
+            let config = fs.readFileSync("docusaurus.config.ts", "utf8");
+            config = config.replace(
+              /(label:\s*")v?[^"]*(")/,
+              `$1${version}$2`
+            );
+            fs.writeFileSync("docusaurus.config.ts", config);
+          '
+
+      # --- Open PR ---
+      - name: Clean up source checkout
+        run: rm -rf _source
+
+      - name: Open PR if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet; then
+            echo "No changes detected"
+            exit 0
+          fi
+          branch="auto/sync-docs"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add -A
+          git commit -m "sync: update API reference and version label from kubeswarm@${{ steps.source.outputs.sha }}"
+          git push --force origin "$branch"
+          existing=$(gh pr list --head "$branch" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already exists - force-pushed update"
+          else
+            gh pr create \
+              --title "sync: update API reference and version label" \
+              --body "Auto-generated from kubeswarm/kubeswarm@\`${{ steps.source.outputs.sha }}\`" \
+              --head "$branch"
+          fi

@@ -1,0 +1,46 @@
+name: Dead Link Check
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # every Monday at 9am UTC
+  workflow_dispatch:
+
+concurrency:
+  group: dead-links
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lychee
+        run: |
+          curl -sfL https://github.com/lycheeverse/lychee/releases/latest/download/lychee-x86_64-unknown-linux-gnu.tar.gz \
+            | tar xz -C /usr/local/bin lychee
+
+      - name: Check for dead links
+        id: lychee
+        run: |
+          lychee \
+            --exclude-loopback \
+            --exclude localhost \
+            --exclude example.com \
+            --timeout 30 \
+            ./docs/**/*.md \
+            2>&1 | tee lychee-report.txt
+
+      - name: Create issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Dead links detected ($(date +%Y-%m-%d))" \
+            --body "$(cat lychee-report.txt)" \
+            --label docs

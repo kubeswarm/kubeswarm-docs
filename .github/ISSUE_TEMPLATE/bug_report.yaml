@@ -1,0 +1,27 @@
+name: Bug Report
+description: Report a docs issue
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What's wrong?
+      description: Describe the docs issue (broken link, incorrect info, etc.)
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      description: Link to the affected docs page
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: coc
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I have read and agree to the [Code of Conduct](https://github.com/kubeswarm/kubeswarm/blob/main/CODE_OF_CONDUCT.md)
+          required: true

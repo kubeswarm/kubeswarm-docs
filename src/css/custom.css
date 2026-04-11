@@ -1,0 +1,141 @@
+/* kubeswarm docs - custom theme */
+
+/* ── Fonts ── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --ifm-font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ifm-font-family-monospace:
+    "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+/* ── Navbar title ── */
+.navbar__title {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+/* ── Light mode ── */
+:root {
+  --ifm-color-primary: #3b6fe0;
+  --ifm-color-primary-dark: #2a5fd0;
+  --ifm-color-primary-darker: #2558c5;
+  --ifm-color-primary-darkest: #1e47a0;
+  --ifm-color-primary-light: #4c7fec;
+  --ifm-color-primary-lighter: #5b8af0;
+  --ifm-color-primary-lightest: #7da3f5;
+  --ifm-code-font-size: 90%;
+  --docusaurus-highlighted-code-line-bg: rgba(91, 138, 240, 0.1);
+}
+
+/* ── Dark mode ── */
+[data-theme="dark"] {
+  --ifm-color-primary: #5b8af0;
+  --ifm-color-primary-dark: #4a7aed;
+  --ifm-color-primary-darker: #3f70eb;
+  --ifm-color-primary-darkest: #2355d4;
+  --ifm-color-primary-light: #6c97f2;
+  --ifm-color-primary-lighter: #77a0f3;
+  --ifm-color-primary-lightest: #a5c2fb;
+
+  --ifm-background-color: #0d1117;
+  --ifm-background-surface-color: #161b22;
+  --ifm-navbar-background-color: rgba(13, 17, 23, 0.85);
+  --ifm-toc-border-color: #30363d;
+  --ifm-color-emphasis-300: #30363d;
+  --ifm-color-emphasis-600: #8d96a0;
+  --ifm-heading-color: #e6edf3;
+  --ifm-font-color-base: #c9d1d9;
+  --docusaurus-highlighted-code-line-bg: rgba(91, 138, 240, 0.15);
+}
+
+/* ── Navbar: glass effect ── */
+.navbar {
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
+/* Disable backdrop-filter when mobile sidebar is open so the
+   stacking context it creates doesn't trap the sidebar overlay. */
+.navbar.navbar-sidebar--show {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-theme="dark"] .navbar {
+  background-color: var(--ifm-navbar-background-color);
+}
+
+/* ── Sidebar ── */
+[data-theme="dark"] .theme-doc-sidebar-container {
+  background-color: var(--ifm-background-color);
+  border-right: 1px solid #30363d;
+}
+
+/* ── Code blocks ── */
+[data-theme="dark"] .prism-code {
+  background-color: #161b22 !important;
+}
+
+[data-theme="dark"] code {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  color: #a5c2fb;
+}
+
+/* Don't double-style code inside pre blocks */
+pre code {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+}
+
+/* ── Headings ── */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── Tables ── */
+[data-theme="dark"] table thead tr {
+  background-color: #161b22;
+}
+
+[data-theme="dark"] table tbody tr:nth-child(2n) {
+  background-color: rgba(22, 27, 34, 0.5);
+}
+
+[data-theme="dark"] table tr:hover {
+  background-color: rgba(91, 138, 240, 0.05);
+}
+
+/* ── Transitions (skip on first paint) ── */
+.transitioning * {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* ── Admonitions ── */
+[data-theme="dark"] .alert {
+  border-left-width: 3px;
+}
+
+/* ── Footer ── */
+[data-theme="dark"] .footer {
+  background-color: #0d1117;
+  border-top: 1px solid #30363d;
+}
