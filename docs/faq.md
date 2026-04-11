@@ -32,7 +32,7 @@ No. kubeswarm uses native Kubernetes Secrets only. No wrapper CRD.
 
 ## How does budget enforcement work?
 
-The operator tracks rolling 24h token usage per agent. When `spec.guardrails.limits.dailyTokens` is exceeded, replicas are scaled to 0 and a `BudgetExceeded` condition is set. Replicas restore automatically when the window rotates. See [Budget Management](/advanced/budget-management).
+The operator tracks rolling 24h token usage per agent. When `spec.guardrails.limits.dailyTokens` is exceeded, replicas are scaled to 0 and a `BudgetExceeded` condition is set. Replicas restore automatically when the window rotates. See [Budget Management](/scaling/budget-management).
 
 ## Can agents call other agents?
 

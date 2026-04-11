@@ -13,6 +13,6 @@ kubeswarm connects your Kubernetes agents to external services for LLM inference
 - [MCP Servers](./mcp-servers) - Model Context Protocol tool servers
 - [Vector Stores](./vector-stores) - Qdrant, Pinecone, Weaviate
 - [Notifications](./notifications) - Slack, webhooks
-- [Observability](./observability) - OpenTelemetry, Prometheus
-- [Autoscaling](./autoscaling) - KEDA
+- [Observability](/observability/overview) - OpenTelemetry, Prometheus
+- [Autoscaling](/scaling/autoscaling) - KEDA
 - [Artifact Storage](./artifact-storage) - S3, GCS
