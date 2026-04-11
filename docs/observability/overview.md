@@ -1,6 +1,6 @@
 ---
-sidebar_position: 5
-sidebar_label: "Observability"
+sidebar_position: 1
+sidebar_label: "Overview"
 description: "kubeswarm observability - OpenTelemetry tracing, Prometheus metrics, structured logging and semantic health checks for agents on Kubernetes."
 ---
 

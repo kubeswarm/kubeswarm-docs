@@ -1,5 +1,5 @@
 ---
-sidebar_position: 7
+sidebar_position: 2
 sidebar_label: "Autoscaling (KEDA)"
 description: "kubeswarm KEDA autoscaling - scale agent pods on Kubernetes based on pending task queue depth. Configure min/max replicas and scale-to-zero."
 ---
