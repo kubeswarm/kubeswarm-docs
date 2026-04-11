@@ -87,7 +87,7 @@ A lower-level tool for advanced patterns where the agent needs fine-grained cont
 
 ## How it works with autoscaling
 
-Fan-out naturally increases the pending task count on the agent's queue. When [KEDA-based autoscaling](/integrations/autoscaling) is enabled, this triggers pod scale-up:
+Fan-out naturally increases the pending task count on the agent's queue. When [KEDA-based autoscaling](/scaling/autoscaling) is enabled, this triggers pod scale-up:
 
 1. Agent submits 10 subtasks via `spawn_and_collect`
 2. 10 pending messages appear on the Redis Stream
@@ -100,7 +100,7 @@ No changes to the autoscaling configuration are needed. The existing pending-tas
 
 ## How it works with budgets
 
-Each subtask is a separate task execution that consumes tokens from the agent's [SwarmBudget](/advanced/budget-management). The originating agent's own token usage for the fan-out/collect cycle is minimal (tool call overhead only). The real cost is in the subtask executions, which are tracked individually.
+Each subtask is a separate task execution that consumes tokens from the agent's [SwarmBudget](/scaling/budget-management). The originating agent's own token usage for the fan-out/collect cycle is minimal (tool call overhead only). The real cost is in the subtask executions, which are tracked individually.
 
 ## Example
 
