@@ -111,6 +111,6 @@ The `swarm` CLI is a development tool. It runs agents as local processes, not Ku
 ## Next steps
 
 - [Deploy to Kubernetes](/quick-start) when you are ready for production
-- [Connect MCP tools](/getting-started/connect-mcp-tools) to give agents capabilities
-- [Create a pipeline](/getting-started/create-a-pipeline) with multiple agents
+- [Connect MCP tools](/tools/connect-mcp-tools) to give agents capabilities
+- [Create a pipeline](/orchestration/pipelines) with multiple agents
 - Browse [cookbook recipes](/examples/) for production patterns

@@ -5,7 +5,7 @@ sidebar_label: "Overview"
 description: "kubeswarm is a Kubernetes operator for agent orchestration. Deploy, scale and operate LLM-powered agents with MCP tools, guardrails and team workflows using kubectl."
 ---
 
-# kubeswarm - Orchestrate Agents on Kubernetes
+# Overview
 
 **Orchestrate AI agents at swarm scale.**
 
@@ -60,7 +60,7 @@ kubectl get swagent -w
 ## Next steps
 
 - [Quick Start](/quick-start) - full walkthrough with a local model (no API keys needed)
-- [Deploy an agent](/getting-started/deploy-an-agent) - deploy, configure resources, verify
-- [Connect MCP tools](/getting-started/connect-mcp-tools) - give your agent capabilities
-- [kubeswarm Architecture](/concepts/architecture) - understand the resource model
+- [Deploy an agent](/core/deploy-an-agent) - deploy, configure resources, verify
+- [Connect MCP tools](/tools/connect-mcp-tools) - give your agent capabilities
+- [kubeswarm Architecture](/core/architecture) - understand the resource model
 - [Examples](/examples/) - cookbook recipes for every kubeswarm feature
