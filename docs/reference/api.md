@@ -26,6 +26,8 @@ Package v1alpha1 contains API Schema definitions for the kubeswarm v1alpha1 API 
 - [SwarmMemoryList](#swarmmemorylist)
 - [SwarmNotify](#swarmnotify)
 - [SwarmNotifyList](#swarmnotifylist)
+- [SwarmPolicy](#swarmpolicy)
+- [SwarmPolicyList](#swarmpolicylist)
 - [SwarmRegistry](#swarmregistry)
 - [SwarmRegistryList](#swarmregistrylist)
 - [SwarmRun](#swarmrun)
@@ -35,6 +37,43 @@ Package v1alpha1 contains API Schema definitions for the kubeswarm v1alpha1 API 
 - [SwarmTeam](#swarmteam)
 - [SwarmTeamList](#swarmteamlist)
 
+
+
+#### AdvisorConnectionStatus
+
+
+
+AdvisorConnectionStatus reports the health of one advisor connection.
+
+
+
+_Appears in:_
+- [SwarmAgentStatus](#swarmagentstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name matches the AgentConnection name. |  |  |
+| `ready` _boolean_ | Ready indicates the advisor agent exists and has ready replicas. |  |  |
+| `toolInjected` _boolean_ | ToolInjected indicates the consult_&lt;name&gt; tool was successfully<br />added to the executor's tool list. |  |  |
+| `toolName` _string_ | ToolName is the resolved tool name (consult_&lt;name&gt; or override). |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastTransitionTime is the last time Ready changed. |  |  |
+
+
+#### AgentArtifactsConfig
+
+
+
+AgentArtifactsConfig controls automatic artifact saving for completed tasks.
+
+
+
+_Appears in:_
+- [AgentRuntime](#agentruntime)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `saveOutput` _boolean_ | SaveOutput automatically writes the task's final output to the artifact<br />directory after each task completes. The file is named "output" with the<br />extension determined by Format (e.g. output.txt, output.json).<br />collectArtifacts then uploads it to the configured artifact store. |  | Optional: true <br /> |
+| `format` _[ArtifactFormat](#artifactformat)_ | Format controls the file extension and content type of the saved output. | text | Enum: [text json markdown yaml] <br />Optional: true <br /> |
 
 
 #### AgentCapability
@@ -52,7 +91,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `name` _string_ | Name uniquely identifies this capability. Used for registry lookups and MCP tool naming. |  | MinLength: 1 <br />Required: true <br /> |
 | `description` _string_ | Description explains the capability to human operators and LLM consumers. |  | Optional: true <br /> |
-| `tags` _string array_ | Tags enable coarse-grained filtering in registry lookups.<br />A lookup matches agents that declare ALL listed tags. |  | Optional: true <br /> |
+| `tags` _string array_ | Tags enable coarse-grained filtering in registry lookups.<br />A lookup matches agents that declare ALL listed tags. |  | MaxItems: 100 <br />Optional: true <br /> |
 | `exposeMCP` _boolean_ | ExposeMCP registers this capability as a named tool at the MCP gateway endpoint<br />for this agent. Requires the MCP gateway to be enabled in the operator. | false | Optional: true <br /> |
 | `inputSchema` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg)_ | InputSchema is a JSON Schema object describing the capability's input parameters.<br />Stored as a raw YAML/JSON object; enables CRD validation and tooling introspection. |  | Optional: true <br /> |
 | `outputSchema` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#rawextension-runtime-pkg)_ | OutputSchema is a JSON Schema object describing the capability's output shape. |  | Optional: true <br /> |
@@ -64,6 +103,12 @@ _Appears in:_
 
 AgentConnection defines another agent callable as a tool via A2A.
 Exactly one of agentRef or capabilityRef must be set.
+
+Constraint matrix:
+
+	C1: exactly one of agentRef or capabilityRef
+	C2: advisor role requires agentRef and forbids capabilityRef
+	C3: contextPropagation only valid with advisor role
 
 
 
@@ -77,6 +122,29 @@ _Appears in:_
 | `capabilityRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | CapabilityRef names a capability ID in the namespace's SwarmRegistry.<br />The operator resolves the MCP gateway URL at reconcile time. |  | Optional: true <br /> |
 | `trust` _[ToolTrustLevel](#tooltrustlevel)_ | Trust classifies the trust level of this agent connection.<br />Defaults to guardrails.tools.trust.default when unset. |  | Enum: [internal external sandbox] <br />Optional: true <br /> |
 | `instructions` _string_ | Instructions is operational context injected into the agent's system prompt<br />for calls to this agent. Use to constrain scope or set expectations. |  | Optional: true <br /> |
+| `role` _[AgentConnectionRole](#agentconnectionrole)_ | Role defines the operational mode. "tool" (default) behaves as today.<br />"advisor" enables context propagation and auto-injects a consult_&lt;name&gt;<br />tool into the executor's tool list. | tool | Enum: [tool advisor] <br />Optional: true <br /> |
+| `contextPropagation` _[ContextPropagationConfig](#contextpropagationconfig)_ | ContextPropagation configures how conversation context is forwarded to<br />an advisor agent. Only valid when role is "advisor". |  | Optional: true <br /> |
+
+
+#### AgentConnectionRole
+
+_Underlying type:_ _string_
+
+AgentConnectionRole defines the operational mode of an agent connection.
+"tool" (default): the agent is exposed as regular MCP tools, same as today.
+"advisor": enables context propagation and auto-injects a consult_&lt;name&gt;
+tool into the executor's tool list.
+
+_Validation:_
+- Enum: [tool advisor]
+
+_Appears in:_
+- [AgentConnection](#agentconnection)
+
+| Field | Description |
+| --- | --- |
+| `tool` | AgentConnectionRoleTool is the default mode - the agent is exposed as regular MCP tools.<br /> |
+| `advisor` | AgentConnectionRoleAdvisor enables context propagation and auto-injects a consult_&lt;name&gt; tool.<br /> |
 
 
 #### AgentFleetEntry
@@ -96,7 +164,7 @@ _Appears in:_
 | `model` _string_ | Model is the LLM model this agent is configured to use. |  |  |
 | `readyReplicas` _integer_ | ReadyReplicas is the number of agent pods currently ready. |  |  |
 | `dailyTokens` _integer_ | DailyTokens is the rolling 24h token usage copied from SwarmAgent.status. |  | Optional: true <br /> |
-| `capabilities` _string array_ | Capabilities lists the capability IDs this agent contributes to the index. |  | Optional: true <br /> |
+| `capabilities` _string array_ | Capabilities lists the capability IDs this agent contributes to the index. |  | MaxItems: 200 <br />Optional: true <br /> |
 
 
 #### AgentGuardrails
@@ -217,22 +285,6 @@ _Appears in:_
 | `memory` _[AgentLoopMemory](#agentloopmemory)_ | Memory configures vector memory read/write during the tool-use loop.<br />Requires a SwarmMemory with a vector backend referenced via memory.ref. |  | Optional: true <br /> |
 
 
-#### AgentMetrics
-
-
-
-AgentMetrics controls Prometheus-compatible metrics exposure for the agent runtime.
-
-
-
-_Appears in:_
-- [AgentObservability](#agentobservability)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled exposes a /metrics endpoint on the agent pod for Prometheus scraping. | false | Optional: true <br /> |
-
-
 #### AgentObservability
 
 
@@ -248,8 +300,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `healthCheck` _[AgentHealthCheck](#agenthealthcheck)_ | HealthCheck defines how agent health is evaluated and how degraded agents are alerted. |  | Optional: true <br /> |
 | `logging` _[AgentLogging](#agentlogging)_ | Logging controls structured log emission from the agent runtime. |  | Optional: true <br /> |
-| `metrics` _[AgentMetrics](#agentmetrics)_ | Metrics controls Prometheus metrics exposure. |  | Optional: true <br /> |
 | `auditLog` _[AuditLogConfig](#auditlogconfig)_ | AuditLog configures the structured audit trail.<br />When set, overrides namespace (SwarmSettings) and cluster (Helm) audit config. |  | Optional: true <br /> |
+| `notifyRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | NotifyRef references a SwarmNotify policy for this agent's notifications.<br />Covers both health degradation alerts (AgentDegraded) and run completion<br />notifications (TeamSucceeded/TeamFailed) for standalone agent runs.<br />Takes precedence over healthCheck.notifyRef when both are set. |  | Optional: true <br /> |
 
 
 #### AgentPlugins
@@ -309,6 +361,7 @@ _Appears in:_
 | `autoscaling` _[SwarmAgentAutoscaling](#swarmagentautoscaling)_ | Autoscaling configures KEDA-based autoscaling. When set, replicas is ignored.<br />Requires KEDA v2 installed in the cluster. |  | Optional: true <br /> |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#resourcerequirements-v1-core)_ | Resources sets CPU and memory requests/limits for agent pods.<br />When not set the operator injects safe defaults:<br />  requests: cpu=100m, memory=128Mi<br />  limits:   cpu=500m, memory=512Mi, ephemeral-storage=256Mi |  | Optional: true <br /> |
 | `loop` _[AgentLoopPolicy](#agentlooppolicy)_ | Loop configures deep-research runtime features: semantic dedup, in-loop context<br />compression, and vector memory read/write. All features are disabled by default. |  | Optional: true <br /> |
+| `artifacts` _[AgentArtifactsConfig](#agentartifactsconfig)_ | Artifacts configures automatic artifact saving for completed tasks. |  | Optional: true <br /> |
 | `drainTimeoutSeconds` _integer_ | DrainTimeoutSeconds is the time to wait for in-flight tasks to complete during<br />pod shutdown (rolling update, scale-down). Maps to terminationGracePeriodSeconds<br />on the generated pod spec. Should be >= guardrails.limits.timeoutSeconds.<br />Default: 150 (2.5 minutes, giving a 120s task 30s of margin). | 150 | Maximum: 600 <br />Minimum: 30 <br />Optional: true <br /> |
 
 
@@ -326,8 +379,28 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mcp` _[MCPToolSpec](#mcptoolspec) array_ | MCP lists MCP server connections. Each entry exposes multiple tools<br />via the Model Context Protocol SSE transport. |  | Optional: true <br /> |
-| `webhooks` _[WebhookToolSpec](#webhooktoolspec) array_ | Webhooks lists inline single-endpoint HTTP tools. |  | Optional: true <br /> |
+| `mcp` _[MCPToolSpec](#mcptoolspec) array_ | MCP lists MCP server connections. Each entry exposes multiple tools<br />via the Model Context Protocol SSE transport. |  | MaxItems: 50 <br />Optional: true <br /> |
+| `webhooks` _[WebhookToolSpec](#webhooktoolspec) array_ | Webhooks lists inline single-endpoint HTTP tools. |  | MaxItems: 50 <br />Optional: true <br /> |
+
+
+#### ArtifactFormat
+
+_Underlying type:_ _string_
+
+ArtifactFormat identifies the output format for saved artifacts.
+
+_Validation:_
+- Enum: [text json markdown yaml]
+
+_Appears in:_
+- [AgentArtifactsConfig](#agentartifactsconfig)
+
+| Field | Description |
+| --- | --- |
+| `text` |  |
+| `json` |  |
+| `markdown` |  |
+| `yaml` |  |
 
 
 #### ArtifactSpec
@@ -347,24 +420,6 @@ _Appears in:_
 | `name` _string_ | Name is the artifact identifier, used in template references:<br />\{\{ .steps.&lt;stepName&gt;.artifacts.&lt;name&gt; \}\} |  | MinLength: 1 <br />Required: true <br /> |
 | `description` _string_ | Description documents the artifact for operators and tooling. |  | Optional: true <br /> |
 | `contentType` _string_ | ContentType is the MIME type hint for the artifact (e.g. application/pdf). |  | Optional: true <br /> |
-
-
-#### ArtifactStoreGCSSpec
-
-
-
-ArtifactStoreGCS configures Google Cloud Storage artifact storage.
-
-
-
-_Appears in:_
-- [ArtifactStoreSpec](#artifactstorespec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `bucket` _string_ | Bucket is the GCS bucket name. |  | Required: true <br /> |
-| `prefix` _string_ | Prefix is an optional object prefix applied to all stored artifacts. |  | Optional: true <br /> |
-| `credentialsSecret` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | CredentialsSecret references a k8s Secret with a service account JSON key<br />under the "credentials.json" key. |  | Optional: true <br /> |
 
 
 #### ArtifactStoreLocalSpec
@@ -391,7 +446,7 @@ _Appears in:_
 
 
 
-ArtifactStoreS3 configures Amazon S3 artifact storage.
+ArtifactStoreS3Spec configures Amazon S3 (or S3-compatible) artifact storage.
 
 
 
@@ -403,7 +458,8 @@ _Appears in:_
 | `bucket` _string_ | Bucket is the S3 bucket name. |  | Required: true <br /> |
 | `region` _string_ | Region is the AWS region (e.g. us-east-1). |  | Optional: true <br /> |
 | `prefix` _string_ | Prefix is an optional key prefix applied to all stored artifacts. |  | Optional: true <br /> |
-| `credentialsSecret` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | CredentialsSecret references a k8s Secret containing AWS_ACCESS_KEY_ID<br />and AWS_SECRET_ACCESS_KEY keys. When empty, the default credential chain is used. |  | Optional: true <br /> |
+| `endpoint` _string_ | Endpoint is the S3-compatible endpoint URL for MinIO, Ceph, R2, etc.<br />When empty, the default AWS S3 endpoint is used. |  | Optional: true <br /> |
+| `credentialsSecret` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | CredentialsSecret references a k8s Secret containing AWS_ACCESS_KEY_ID<br />and AWS_SECRET_ACCESS_KEY keys. When empty, the default credential chain<br />is used (instance roles, IRSA, env vars). |  | Optional: true <br /> |
 
 
 #### ArtifactStoreSpec
@@ -419,10 +475,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[ArtifactStoreType](#artifactstoretype)_ | Type selects the storage backend. |  | Enum: [local s3 gcs] <br />Required: true <br /> |
+| `type` _[ArtifactStoreType](#artifactstoretype)_ | Type selects the storage backend. |  | Enum: [local s3] <br />Required: true <br /> |
 | `local` _[ArtifactStoreLocalSpec](#artifactstorelocalspec)_ | Local configures local-disk storage. Only used when type=local. |  | Optional: true <br /> |
-| `s3` _[ArtifactStoreS3Spec](#artifactstores3spec)_ | S3 configures Amazon S3 storage. Only used when type=s3. |  | Optional: true <br /> |
-| `gcs` _[ArtifactStoreGCSSpec](#artifactstoregcsspec)_ | GCS configures Google Cloud Storage. Only used when type=gcs. |  | Optional: true <br /> |
+| `s3` _[ArtifactStoreS3Spec](#artifactstores3spec)_ | S3 configures Amazon S3 (or S3-compatible) storage. Only used when type=s3. |  | Optional: true <br /> |
 
 
 #### ArtifactStoreType
@@ -432,7 +487,7 @@ _Underlying type:_ _string_
 ArtifactStoreType identifies the storage backend for file artifacts.
 
 _Validation:_
-- Enum: [local s3 gcs]
+- Enum: [local s3]
 
 _Appears in:_
 - [ArtifactStoreSpec](#artifactstorespec)
@@ -440,8 +495,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `local` | ArtifactStoreLocal stores artifacts on the local filesystem (swarm run only).<br /> |
-| `s3` | ArtifactStoreS3 stores artifacts in an Amazon S3 bucket.<br /> |
-| `gcs` | ArtifactStoreGCS stores artifacts in a Google Cloud Storage bucket.<br /> |
+| `s3` | ArtifactStoreS3 stores artifacts in an Amazon S3 (or S3-compatible) bucket.<br /> |
 
 
 #### AuditLogConfig
@@ -455,7 +509,7 @@ See RFC-0030 for the full design.
 
 _Appears in:_
 - [AgentObservability](#agentobservability)
-- [SettingsObservability](#settingsobservability)
+- [SwarmSettingsSpec](#swarmsettingsspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -573,20 +627,51 @@ _Appears in:_
 | `prompt` _string_ | Prompt overrides the system prompt sent to the compression LLM.<br />The placeholder "\{\{ .targetTokens \}\}" is available.<br />When unset, a built-in summarisation prompt is used. |  | Optional: true <br /> |
 
 
-#### ContextExtractConfig
+#### ContextPropagationConfig
 
 
 
-ContextExtractConfig configures field or pattern extraction.
+ContextPropagationConfig controls how conversation context is forwarded
+to an advisor agent.
 
 
 
 _Appears in:_
-- [StepContextPolicy](#stepcontextpolicy)
+- [AgentConnection](#agentconnection)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `path` _string_ | Path is evaluated as a JSONPath expression when the step output is valid JSON,<br />or as a Go regexp (first capture group) for prose output. |  | Required: true <br /> |
+| `recentMessages` _integer_ | RecentMessages is the number of recent conversation entries from the<br />executor's conversation to include in the advisor's context. | 20 | Maximum: 200 <br />Minimum: 1 <br />Optional: true <br /> |
+| `maxCallsPerTask` _integer_ | MaxCallsPerTask caps how many times the executor can consult this<br />advisor in a single task execution attempt. The counter resets when<br />the task queue retries the task (new attempt = new counter). | 3 | Maximum: 50 <br />Minimum: 1 <br />Optional: true <br /> |
+| `timeoutSeconds` _integer_ | TimeoutSeconds is the wall-clock timeout for an individual advisor<br />call, from initiation to final response byte. | 60 | Maximum: 300 <br />Minimum: 5 <br />Optional: true <br /> |
+| `maxAdvisorTokensPerTask` _integer_ | MaxAdvisorTokensPerTask caps cumulative advisor input+output tokens<br />across all calls to this advisor within one execution attempt.<br />0 means no per-advisor limit (cost control deferred to SwarmBudget). | 0 | Minimum: 0 <br />Optional: true <br /> |
+| `maxContextBytes` _integer_ | MaxContextBytes caps the serialised context payload. Oldest messages<br />are dropped to fit. Default 256KB. | 262144 | Maximum: 1.048576e+06 <br />Minimum: 1024 <br />Optional: true <br /> |
+| `excludeSystemPrompt` _boolean_ | ExcludeSystemPrompt prevents the executor's system prompt from being<br />included in the context sent to the advisor. |  | Optional: true <br /> |
+| `toolName` _string_ | ToolName overrides the auto-generated tool name. When empty, the<br />tool is named consult_&lt;sanitised_name&gt;. |  | MaxLength: 63 <br />Pattern: `^[a-z][a-z0-9_]*$` <br />Optional: true <br /> |
+
+
+#### EffectivePolicySpec
+
+
+
+EffectivePolicySpec is the merged result of all SwarmPolicies in the namespace.
+Read-only, computed by the controller.
+
+
+
+_Appears in:_
+- [SwarmPolicyStatus](#swarmpolicystatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `limits` _[PolicyLimits](#policylimits)_ | Limits is the merged ceiling/floor result. |  | Optional: true <br /> |
+| `toolDeny` _string array_ | ToolDeny is the union of all policy deny lists. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `forceTrustLevel` _[ToolTrustLevel](#tooltrustlevel)_ | ForceTrustLevel is the strictest trust level across all policies. |  | Enum: [internal external sandbox] <br />Optional: true <br /> |
+| `minValidation` _[PolicyOutputLevel](#policyoutputlevel)_ | MinValidation is the strictest validation level across all policies. |  | Enum: [none pattern schema semantic] <br /> |
+| `denyPatterns` _string array_ | DenyPatterns is the union of all policy output deny patterns. |  | MaxItems: 50 <br />Optional: true <br /> |
+| `models` _[PolicyModels](#policymodels)_ | Models is the merged model restriction. |  | Optional: true <br /> |
+| `requirements` _[PolicyRequirements](#policyrequirements)_ | Requirements is the merged boolean requirements (OR across policies). |  |  |
+| `enforcementMode` _[PolicyEnforcementMode](#policyenforcementmode)_ | EnforcementMode is the strictest mode across all policies.<br />Enforce > Warn > Audit. |  | Enum: [Audit Warn Enforce] <br /> |
 
 
 #### EmbeddingConfig
@@ -604,10 +689,108 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `model` _string_ | Model is the embedding model ID.<br />Supported: text-embedding-3-small, text-embedding-3-large (OpenAI),<br />text-embedding-004 (Google), voyage-3-lite (Voyage AI). |  | MinLength: 1 <br />Required: true <br /> |
-| `provider` _string_ | Provider selects the embedding provider.<br />When "auto" (default), the provider is inferred from the model name. | auto | Enum: [auto openai google voyageai] <br />Optional: true <br /> |
+| `model` _string_ | Model is the embedding model ID.<br />Supported: text-embedding-3-small, text-embedding-3-large (OpenAI). |  | MinLength: 1 <br />Required: true <br /> |
+| `provider` _string_ | Provider selects the embedding provider.<br />When "auto" (default), the provider is inferred from the model name. | auto | Enum: [auto openai] <br />Optional: true <br /> |
 | `dimensions` _integer_ | Dimensions is the output vector dimension. When 0 the model default is used.<br />Use this to select a smaller dimension on models that support Matryoshka representations<br />(e.g. text-embedding-3-small supports 512 or 1536). |  | Optional: true <br /> |
 | `apiKeyRef` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretkeyselector-v1-core)_ | APIKeyRef references a Secret key that holds the embedding provider API key.<br />When not set, the agent falls back to the same provider key used for the LLM<br />(OPENAI_API_KEY etc.). Required when the embedding provider differs from the LLM provider. |  | Optional: true <br /> |
+
+
+#### GatewayConfig
+
+
+
+GatewayConfig controls the scope and behavior of a gateway agent.
+
+
+
+_Appears in:_
+- [SwarmAgentSpec](#swarmagentspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `registryRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | RegistryRef names the SwarmRegistry to query for capability discovery.<br />Required. The registry's spec.scope controls whether discovery is<br />namespace-scoped or cluster-wide. |  | Required: true <br /> |
+| `filterByTags` _string array_ | FilterByTags filters discovery to capabilities matching ALL listed tags.<br />Empty means no tag filtering - all capabilities in the registry are visible.<br />Filters by AgentCapability.Tags values, not capability IDs. |  | MaxItems: 50 <br />Optional: true <br /> |
+| `dispatchMode` _[GatewayDispatchMode](#gatewaydispatchmode)_ | DispatchMode controls whether the gateway can dispatch work to other agents.<br />"enabled" (default): registry_search and dispatch tools are both injected.<br />"disabled": only registry_search is injected; the gateway can search but not dispatch. | enabled | Enum: [enabled disabled] <br />Optional: true <br /> |
+| `dispatchTimeoutSeconds` _integer_ | DispatchTimeoutSeconds is the maximum time the gateway will wait for<br />a single dispatched task to complete. | 120 | Maximum: 3600 <br />Minimum: 10 <br />Optional: true <br /> |
+| `maxDispatchDepth` _integer_ | MaxDispatchDepth is the maximum dispatch chain depth per task. | 3 | Maximum: 10 <br />Minimum: 1 <br />Optional: true <br /> |
+| `maxResultsPerSearch` _integer_ | MaxResultsPerSearch caps how many capabilities registry_search returns<br />to the LLM per call. | 10 | Maximum: 50 <br />Minimum: 1 <br />Optional: true <br /> |
+| `maxDispatchCalls` _integer_ | MaxDispatchCalls caps how many times the LLM can call dispatch in a single task. | 5 | Maximum: 20 <br />Minimum: 1 <br />Optional: true <br /> |
+| `maxSearchCalls` _integer_ | MaxSearchCalls caps how many times the LLM can call registry_search in a single task. | 3 | Maximum: 20 <br />Minimum: 1 <br />Optional: true <br /> |
+| `fallback` _[GatewayFallback](#gatewayfallback)_ | Fallback controls what happens when no capability matches.<br />When nil, defaults to answer-directly behavior. |  | Optional: true <br /> |
+| `allowedTargets` _string array_ | AllowedTargets restricts which agents the gateway can dispatch to.<br />Entries are SwarmAgent names. When empty, all non-gateway agents<br />discoverable via the registry are allowed. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `allowGatewayTargets` _boolean_ | AllowGatewayTargets permits dispatching to other gateway agents.<br />When false (default), the operator excludes agents with spec.gateway<br />set from the capability list. | false | Optional: true <br /> |
+
+
+#### GatewayDispatchMode
+
+_Underlying type:_ _string_
+
+GatewayDispatchMode controls whether a gateway agent can dispatch work.
+
+_Validation:_
+- Enum: [enabled disabled]
+
+_Appears in:_
+- [GatewayConfig](#gatewayconfig)
+
+| Field | Description |
+| --- | --- |
+| `enabled` | GatewayDispatchEnabled injects both registry_search and dispatch tools.<br /> |
+| `disabled` | GatewayDispatchDisabled injects only registry_search (search-only gateway).<br /> |
+
+
+#### GatewayFallback
+
+
+
+GatewayFallback controls behavior when no capability matches the user's request.
+
+
+
+_Appears in:_
+- [GatewayConfig](#gatewayconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `mode` _[GatewayFallbackMode](#gatewayfallbackmode)_ | Mode determines the fallback behavior. | answer-directly | Enum: [fail answer-directly agent] <br /> |
+| `agentRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | AgentRef names the fallback agent to dispatch to when Mode is "agent".<br />Required when Mode is "agent", ignored otherwise. |  | Optional: true <br /> |
+
+
+#### GatewayFallbackMode
+
+_Underlying type:_ _string_
+
+GatewayFallbackMode controls behavior when no capability matches a user's request.
+
+_Validation:_
+- Enum: [fail answer-directly agent]
+
+_Appears in:_
+- [GatewayFallback](#gatewayfallback)
+
+| Field | Description |
+| --- | --- |
+| `fail` | GatewayFallbackFail returns an error to the caller.<br /> |
+| `answer-directly` | GatewayFallbackAnswerDirectly lets the gateway respond using its own model.<br /> |
+| `agent` | GatewayFallbackAgent dispatches to a specific fallback agent.<br /> |
+
+
+#### GatewayStatus
+
+
+
+GatewayStatus reports gateway-specific observable state beyond conditions.
+
+
+
+_Appears in:_
+- [SwarmAgentStatus](#swarmagentstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `routableCapabilities` _integer_ | RoutableCapabilities is the count of capabilities injected into the<br />gateway pod after tag filtering, readiness checks, and the 50-entry cap. |  | Optional: true <br /> |
+| `totalMatchingCapabilities` _integer_ | TotalMatchingCapabilities is the count before the 50-entry cap. |  | Optional: true <br /> |
+| `lastCapabilitySync` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastCapabilitySync is the time the operator last updated the<br />gateway's capability list. |  | Optional: true <br /> |
 
 
 #### GuardrailLimits
@@ -667,8 +850,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `id` _string_ | ID is the capability identifier. |  |  |
 | `description` _string_ | Description is the human-readable description of the capability, taken from the<br />first agent that declares it. Used by the router LLM to select the right agent. |  |  |
-| `agents` _string array_ | Agents is the list of SwarmAgent names that advertise this capability. |  |  |
-| `tags` _string array_ | Tags is the union of all tags declared for this capability across all agents. |  |  |
+| `agents` _string array_ | Agents is the list of SwarmAgent names that advertise this capability. |  | MaxItems: 1000 <br /> |
+| `tags` _string array_ | Tags is the union of all tags declared for this capability across all agents. |  | MaxItems: 100 <br /> |
 
 
 #### LogLevel
@@ -981,6 +1164,26 @@ _Appears in:_
 | `AgentDegraded` |  |
 
 
+#### OnFailureAction
+
+_Underlying type:_ _string_
+
+StepValidation configures output validation for a pipeline step.
+At least one of Contains, Schema, or Semantic must be set.
+OnFailureAction controls what happens when step validation fails.
+
+_Validation:_
+- Enum: [fail retry]
+
+_Appears in:_
+- [StepValidation](#stepvalidation)
+
+| Field | Description |
+| --- | --- |
+| `fail` | OnFailureFail marks the step Failed immediately (default).<br /> |
+| `retry` | OnFailureRetry resets the step to Pending for re-execution.<br /> |
+
+
 #### PipelineStepPhase
 
 _Underlying type:_ _string_
@@ -1054,24 +1257,155 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `address` _string_ | Address is the host:port of the gRPC plugin server. |  | MinLength: 1 <br />Required: true <br /> |
-| `tls` _[PluginTLSConfig](#plugintlsconfig)_ | TLS configures mTLS for the gRPC connection.<br />When not set the connection is plaintext. |  | Optional: true <br /> |
+| `tlsSecretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | TLSSecretRef references a Secret containing TLS credentials for mTLS.<br />The Secret must contain tls.crt, tls.key, and ca.crt.<br />When not set the connection is plaintext. |  | Optional: true <br /> |
 
 
-#### PluginTLSConfig
+#### PolicyEnforcementMode
+
+_Underlying type:_ _string_
+
+PolicyEnforcementMode controls whether the policy rejects, warns, or only audits.
+
+_Validation:_
+- Enum: [Audit Warn Enforce]
+
+_Appears in:_
+- [EffectivePolicySpec](#effectivepolicyspec)
+- [SwarmPolicySpec](#swarmpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `Audit` | PolicyEnforcementAudit logs violations without rejecting. Default.<br /> |
+| `Warn` | PolicyEnforcementWarn returns admission warnings visible in kubectl<br />output and logs violations. Does not reject.<br /> |
+| `Enforce` | PolicyEnforcementEnforce rejects non-compliant agents at admission.<br /> |
+
+
+#### PolicyLimits
 
 
 
-PluginTLSConfig references a Secret containing TLS credentials for a gRPC plugin.
-The Secret must contain tls.crt, tls.key, and ca.crt.
+PolicyLimits defines ceilings and floors for agent execution parameters.
+All fields are pointers: nil means "no constraint from this policy."
+When multiple policies exist, the strictest non-nil value wins.
+All token fields refer to total tokens (input + output) unless explicitly
+suffixed. Cached/prompt-cached tokens count toward limits (conservative default).
 
 
 
 _Appears in:_
-- [PluginEndpoint](#pluginendpoint)
+- [EffectivePolicySpec](#effectivepolicyspec)
+- [SwarmPolicySpec](#swarmpolicyspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | SecretRef names the Secret containing the TLS credentials. |  |  |
+| `maxDailyTokens` _integer_ | MaxDailyTokens is the ceiling on guardrails.limits.dailyTokens.<br />An agent requesting more is rejected (Enforce), warned (Warn),<br />or flagged (Audit). An agent omitting dailyTokens gets this as<br />the effective limit at runtime. |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxTokensPerCall` _integer_ | MaxTokensPerCall is the ceiling on guardrails.limits.tokensPerCall. |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxTimeoutSeconds` _integer_ | MaxTimeoutSeconds is the ceiling on guardrails.limits.timeoutSeconds. |  | Minimum: 1 <br />Optional: true <br /> |
+| `minTimeoutSeconds` _integer_ | MinTimeoutSeconds is the floor on guardrails.limits.timeoutSeconds.<br />Prevents agents from setting unreasonably short timeouts. |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxConcurrentTasks` _integer_ | MaxConcurrentTasks is the ceiling on guardrails.limits.concurrentTasks. |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxThinkingTokensPerCall` _integer_ | MaxThinkingTokensPerCall is the ceiling on guardrails.limits.maxThinkingTokensPerCall. |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxAnswerTokensPerCall` _integer_ | MaxAnswerTokensPerCall is the ceiling on guardrails.limits.maxAnswerTokensPerCall. |  | Minimum: 1 <br />Optional: true <br /> |
+
+
+#### PolicyModels
+
+
+
+PolicyModels restricts which models agents may use. Both fields support
+glob patterns: exact match or wildcard with `*`. Deny takes precedence
+over allow.
+
+
+
+_Appears in:_
+- [EffectivePolicySpec](#effectivepolicyspec)
+- [SwarmPolicySpec](#swarmpolicyspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `allowed` _string array_ | Allowed is a list of glob patterns for permitted models.<br />When multiple policies specify allowed lists, the intersection is used. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `denied` _string array_ | Denied is a list of glob patterns for forbidden models.<br />When multiple policies specify denied lists, the union is used. |  | MaxItems: 100 <br />Optional: true <br /> |
+
+
+#### PolicyOutput
+
+
+
+PolicyOutput defines output validation requirements.
+
+
+
+_Appears in:_
+- [SwarmPolicySpec](#swarmpolicyspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `minValidation` _[PolicyOutputLevel](#policyoutputlevel)_ | MinValidation is the minimum validation level required on all<br />SwarmTeam steps referencing agents in this namespace. | none | Enum: [none pattern schema semantic] <br />Optional: true <br /> |
+| `denyPatterns` _string array_ | DenyPatterns are RE2 regex patterns merged into every step's<br />rejectPatterns at runtime. Invalid regexes are rejected at admission. |  | MaxItems: 50 <br />Optional: true <br /> |
+
+
+#### PolicyOutputLevel
+
+_Underlying type:_ _string_
+
+PolicyOutputLevel defines the minimum validation level required.
+Ordering: semantic (strictest) > schema > pattern > none (most permissive).
+Each level is independent - schema does not require pattern.
+
+_Validation:_
+- Enum: [none pattern schema semantic]
+
+_Appears in:_
+- [EffectivePolicySpec](#effectivepolicyspec)
+- [PolicyOutput](#policyoutput)
+
+| Field | Description |
+| --- | --- |
+| `none` |  |
+| `pattern` |  |
+| `schema` |  |
+| `semantic` |  |
+
+
+#### PolicyRequirements
+
+
+
+PolicyRequirements groups boolean requirements that all agents must satisfy.
+
+
+
+_Appears in:_
+- [EffectivePolicySpec](#effectivepolicyspec)
+- [SwarmPolicySpec](#swarmpolicyspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `budgetRef` _boolean_ | BudgetRef requires all agents in the namespace to reference a SwarmBudget. |  | Optional: true <br /> |
+| `audit` _boolean_ | Audit requires all agents to have audit logging enabled. |  | Optional: true <br /> |
+| `allowList` _boolean_ | AllowList requires all agents to have a non-empty tool allow list. |  | Optional: true <br /> |
+
+
+#### PolicyTools
+
+
+
+PolicyTools defines tool access policy enforced at runtime.
+Deny entries use glob patterns (not regex). Exact match or wildcard
+with `*`. Examples: "shell/*" (all shell tools), "filesystem/write_file"
+(exact tool), "*/execute_code" (tool across all namespaces).
+
+
+
+_Appears in:_
+- [SwarmPolicySpec](#swarmpolicyspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `deny` _string array_ | Deny is a deny list merged with each agent's guardrails.tools.deny.<br />Agents cannot remove entries from the policy deny list. Deny always<br />takes precedence over allow. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `forceTrustLevel` _[ToolTrustLevel](#tooltrustlevel)_ | ForceTrustLevel sets the minimum trust level for all agents.<br />Agents cannot use a more permissive level.<br />Ordering: sandbox (strictest) > external > internal (most permissive). |  | Enum: [internal external sandbox] <br />Optional: true <br /> |
+
+
 
 
 #### PromptFragment
@@ -1240,7 +1574,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `capability` _string_ | Capability is the exact capability ID to match. |  | MinLength: 1 <br />Required: true <br /> |
-| `tags` _string array_ | Tags narrows candidates to agents that declare ALL listed tags. |  | Optional: true <br /> |
+| `tags` _string array_ | Tags narrows candidates to agents that declare ALL listed tags. |  | MaxItems: 100 <br />Optional: true <br /> |
 | `strategy` _[RegistryLookupStrategy](#registrylookupstrategy)_ | Strategy controls which agent is selected when multiple match. | least-busy | Enum: [least-busy round-robin random] <br /> |
 | `registryRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | RegistryRef names the SwarmRegistry to query. Defaults to first registry in namespace. |  | Optional: true <br /> |
 | `fallback` _string_ | Fallback is the role/agent name to use when no agent matches.<br />If unset and no match, the step fails with RegistryLookupFailed. |  | Optional: true <br /> |
@@ -1283,22 +1617,6 @@ _Appears in:_
 | `cluster-wide` | RegistryScopeCluster indexes all SwarmAgents cluster-wide. Requires a ClusterRole<br />that grants cross-namespace SwarmAgent reads.<br /> |
 
 
-#### SettingsObservability
-
-
-
-SettingsObservability holds namespace-level observability configuration.
-
-
-
-_Appears in:_
-- [SwarmSettingsSpec](#swarmsettingsspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `auditLog` _[AuditLogConfig](#auditlogconfig)_ | AuditLog configures the structured audit trail at namespace level.<br />Overrides cluster-level (Helm) audit config; can be overridden per-agent. |  | Optional: true <br /> |
-
-
 #### SlackChannelSpec
 
 
@@ -1333,15 +1651,13 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `strategy` _string_ | Strategy determines how the output is handled before downstream injection.<br />full: verbatim injection wrapped in &lt;swarm:step-output&gt; (default, current behaviour).<br />compress: output is summarised by an LLM call before injection.<br />extract: a JSONPath or regexp is applied; only the matched value is injected.<br />none: nothing is injected; "\{\{ .steps.&lt;name&gt;.output \}\}" resolves to "". | full | Enum: [full compress extract none] <br /> |
 | `compress` _[ContextCompressConfig](#contextcompressconfig)_ | Compress configures LLM-based summarisation. Only used when strategy=compress. |  | Optional: true <br /> |
-| `extract` _[ContextExtractConfig](#contextextractconfig)_ | Extract configures field or pattern extraction. Only used when strategy=extract. |  | Optional: true <br /> |
+| `extractPath` _string_ | ExtractPath is evaluated as a JSONPath expression when the step output is valid JSON,<br />or as a Go regexp (first capture group) for prose output.<br />Only used when strategy=extract. |  | Optional: true <br /> |
 
 
 #### StepValidation
 
 
 
-StepValidation configures output validation for a pipeline step.
-At least one of Contains, Schema, or Semantic must be set.
 When multiple modes are configured all must pass; evaluation order is
 Contains -> Schema -> Semantic (cheapest first).
 
@@ -1356,9 +1672,9 @@ _Appears in:_
 | `schema` _string_ | Schema is a JSON Schema string. The step output must be valid JSON that satisfies<br />the schema's required fields and top-level property type constraints. |  | Optional: true <br /> |
 | `semantic` _string_ | Semantic is a natural-language validator prompt sent to an LLM.<br />The LLM must respond with "PASS" (case-insensitive) for validation to pass.<br />Use \{\{ .output \}\} in the prompt to embed the step output. |  | Optional: true <br /> |
 | `semanticModel` _string_ | SemanticModel overrides the LLM model used for semantic validation.<br />Defaults to the step's SwarmAgent model when empty.<br />Recommended: use a stronger model than the step agent to avoid grading its own output. |  | Optional: true <br /> |
-| `onFailure` _string_ | OnFailure controls what happens when validation fails.<br />"fail" (default) marks the step Failed immediately.<br />"retry" resets the step to Pending for re-execution. | fail | Enum: [fail retry] <br />Optional: true <br /> |
+| `onFailure` _[OnFailureAction](#onfailureaction)_ | OnFailure controls what happens when validation fails.<br />OnFailureFail (default) marks the step Failed immediately.<br />OnFailureRetry resets the step to Pending for re-execution. | fail | Enum: [fail retry] <br />Optional: true <br /> |
 | `maxRetries` _integer_ | MaxRetries caps validation-level retries when OnFailure is "retry".<br />Independent of queue-level task retries. | 2 | Maximum: 10 <br />Minimum: 0 <br />Optional: true <br /> |
-| `rejectPatterns` _string array_ | RejectPatterns is a list of RE2 regular expressions that act as a security gate<br />against prompt injection. A match against any pattern causes the step to fail<br />immediately with reason OutputRejected, regardless of other validation settings.<br />Evaluated before Contains, Schema, and Semantic checks.<br />Example: ["(?i)ignore.*previous.*instructions", "(?i)act as"] |  | Optional: true <br /> |
+| `rejectPatterns` _string array_ | RejectPatterns is a list of RE2 regular expressions that act as a security gate<br />against prompt injection. A match against any pattern causes the step to fail<br />immediately with reason OutputRejected, regardless of other validation settings.<br />Evaluated before Contains, Schema, and Semantic checks.<br />Example: ["(?i)ignore.*previous.*instructions", "(?i)act as"] |  | MaxItems: 50 <br />Optional: true <br /> |
 
 
 #### SwarmAgent
@@ -1437,6 +1753,8 @@ _Appears in:_
 | `healthy` _boolean_ | Healthy is true when the last probe received a non-5xx HTTP response.<br />Nil means the server has not been probed yet. |  | Optional: true <br /> |
 | `message` _string_ | Message holds error detail when Healthy is false. |  | Optional: true <br /> |
 | `lastCheck` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastCheck is when the probe was last run. |  | Optional: true <br /> |
+| `authType` _string_ | AuthType reports what authentication the controller configured for this<br />server: "none", "bearer", or "mtls". Empty means not yet evaluated. |  | Enum: [none bearer mtls] <br />Optional: true <br /> |
+| `trust` _[ToolTrustLevel](#tooltrustlevel)_ | Trust is the trust level assigned to this MCP server.<br />Mirrors spec for observability - confirms the controller applied it. |  | Enum: [internal external sandbox] <br />Optional: true <br /> |
 
 
 #### SwarmAgentSpec
@@ -1454,15 +1772,16 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `model` _string_ | Model is the LLM model ID (e.g. "claude-sonnet-4-6"). |  | MinLength: 1 <br />Required: true <br /> |
 | `prompt` _[AgentPrompt](#agentprompt)_ | Prompt configures the agent's system prompt. |  | Required: true <br /> |
-| `settings` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Settings references SwarmSettings objects whose fragments are composed into<br />this agent's system prompt, in list order. Last occurrence wins for duplicate keys. |  | Optional: true <br /> |
-| `capabilities` _[AgentCapability](#agentcapability) array_ | Capabilities advertises what this agent can do to SwarmRegistry and the MCP gateway.<br />Agents without capabilities are invisible to registry lookups. |  | Optional: true <br /> |
+| `settings` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Settings references SwarmSettings objects whose fragments are composed into<br />this agent's system prompt, in list order. Last occurrence wins for duplicate keys. |  | MaxItems: 50 <br />Optional: true <br /> |
+| `capabilities` _[AgentCapability](#agentcapability) array_ | Capabilities advertises what this agent can do to SwarmRegistry and the MCP gateway.<br />Agents without capabilities are invisible to registry lookups. |  | MaxItems: 200 <br />Optional: true <br /> |
 | `tools` _[AgentTools](#agenttools)_ | Tools groups MCP server connections and inline webhook tools. |  | Optional: true <br /> |
-| `agents` _[AgentConnection](#agentconnection) array_ | Agents lists other SwarmAgent or registry capabilities callable as tools via A2A. |  | Optional: true <br /> |
+| `agents` _[AgentConnection](#agentconnection) array_ | Agents lists other SwarmAgent or registry capabilities callable as tools via A2A. |  | MaxItems: 50 <br />Optional: true <br /> |
 | `guardrails` _[AgentGuardrails](#agentguardrails)_ | Guardrails groups tool permissions, budget enforcement, and execution limits. |  | Optional: true <br /> |
 | `reasoning` _[ReasoningConfig](#reasoningconfig)_ | Reasoning configures reasoning-capable LLM behavior. See ReasoningConfig<br />for the provider-applicability matrix. |  | Optional: true <br /> |
 | `runtime` _[AgentRuntime](#agentruntime)_ | Runtime groups replica count, autoscaling, resources, and loop policy. | \{  \} |  |
 | `infrastructure` _[AgentInfrastructure](#agentinfrastructure)_ | Infrastructure groups cluster integration concerns: registry, network policy,<br />API key injection, environment variables, and gRPC plugin overrides. |  | Optional: true <br /> |
 | `observability` _[AgentObservability](#agentobservability)_ | Observability groups health check, logging, and metrics configuration. |  | Optional: true <br /> |
+| `gateway` _[GatewayConfig](#gatewayconfig)_ | Gateway configures this agent as a gateway to the swarm.<br />When set, the operator injects registry_search and dispatch tools<br />and adds a GatewayReady condition to status.<br />Mutually exclusive with being an inline role in a SwarmTeam<br />(enforced by admission webhook). |  | Optional: true <br /> |
 
 
 #### SwarmAgentStatus
@@ -1481,12 +1800,17 @@ _Appears in:_
 | `readyReplicas` _integer_ | ReadyReplicas is the number of agent pods ready to accept tasks. |  |  |
 | `replicas` _integer_ | Replicas is the total number of agent pods (ready or not). |  |  |
 | `desiredReplicas` _integer_ | DesiredReplicas is the autoscaling-computed target replica count.<br />Nil for standalone agents not managed by a team autoscaler. |  | Optional: true <br /> |
-| `pendingTasks` _integer_ | PendingTasks is the current number of tasks waiting in the queue for this agent. |  | Optional: true <br /> |
 | `observedGeneration` _integer_ | ObservedGeneration is the .metadata.generation this status reflects. |  |  |
 | `dailyTokenUsage` _[TokenUsage](#tokenusage)_ | DailyTokenUsage is the sum of tokens consumed in the rolling 24-hour window.<br />Populated only when guardrails.limits.dailyTokens is set. |  | Optional: true <br /> |
+| `dedupEnabled` _boolean_ | DedupEnabled surfaces whether tool-call deduplication is active for this agent. |  | Optional: true <br /> |
 | `toolConnections` _[SwarmAgentMCPStatus](#swarmagentmcpstatus) array_ | ToolConnections reports the last observed connectivity state of each configured MCP server. |  | Optional: true <br /> |
 | `systemPromptHash` _string_ | SystemPromptHash is the SHA-256 hex digest of the resolved system prompt last applied. |  | Optional: true <br /> |
-| `exposedMCPCapabilities` _string array_ | ExposedMCPCapabilities lists the capability names currently registered at the MCP gateway. |  | Optional: true <br /> |
+| `exposedMCPCapabilities` _string array_ | ExposedMCPCapabilities lists the capability names currently registered at the MCP gateway. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `toolAgentConnections` _[ToolAgentConnectionStatus](#toolagentconnectionstatus) array_ | ToolAgentConnections reports the status of tool-role agent connections. |  | Optional: true <br /> |
+| `advisorConnections` _[AdvisorConnectionStatus](#advisorconnectionstatus) array_ | AdvisorConnections reports the status of advisor-role agent connections. |  | Optional: true <br /> |
+| `appliedSettings` _string array_ | AppliedSettings lists the names of SwarmSettings objects that were<br />successfully resolved and composed into this agent's configuration.<br />Empty when no settingsRefs are configured. |  | Optional: true <br /> |
+| `appliedFragmentCount` _integer_ | AppliedFragmentCount is the number of prompt fragments composed into<br />the system prompt from all applied SwarmSettings. Zero when no<br />fragments are configured or no settings are referenced. |  | Optional: true <br /> |
+| `gateway` _[GatewayStatus](#gatewaystatus)_ | Gateway reports gateway-specific observable state.<br />Only populated when spec.gateway is set. |  | Optional: true <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions reflect the current state of the SwarmAgent. |  |  |
 
 
@@ -1664,7 +1988,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `source` _[SwarmEventSource](#swarmeventsource)_ | Source defines what fires this trigger. |  | Required: true <br /> |
-| `targets` _[SwarmEventTarget](#swarmeventtarget) array_ | Targets is the list of team pipelines to dispatch when the trigger fires. |  | MinItems: 1 <br />Required: true <br /> |
+| `targets` _[SwarmEventTarget](#swarmeventtarget) array_ | Targets is the list of team pipelines to dispatch when the trigger fires. |  | MaxItems: 20 <br />MinItems: 1 <br />Required: true <br /> |
 | `concurrencyPolicy` _[ConcurrencyPolicy](#concurrencypolicy)_ | ConcurrencyPolicy controls what happens when the trigger fires while a previous<br />run is still in progress. Defaults to Allow. | Allow | Enum: [Allow Forbid] <br /> |
 | `suspended` _boolean_ | Suspended pauses the trigger without deleting it. | false |  |
 
@@ -1838,8 +2162,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `on` _[NotifyEvent](#notifyevent) array_ | On lists the events that trigger notifications.<br />If empty, all events fire. |  | Enum: [TeamSucceeded TeamFailed TeamTimedOut BudgetWarning BudgetExceeded DailyLimitReached AgentDegraded] <br />Optional: true <br /> |
-| `channels` _[NotifyChannelSpec](#notifychannelspec) array_ | Channels lists the notification targets. |  | MinItems: 1 <br /> |
+| `on` _[NotifyEvent](#notifyevent) array_ | On lists the events that trigger notifications.<br />If empty, all events fire. |  | Enum: [TeamSucceeded TeamFailed TeamTimedOut BudgetWarning BudgetExceeded DailyLimitReached AgentDegraded] <br />MaxItems: 10 <br />Optional: true <br /> |
+| `channels` _[NotifyChannelSpec](#notifychannelspec) array_ | Channels lists the notification targets. |  | MaxItems: 20 <br />MinItems: 1 <br /> |
 | `rateLimitSeconds` _integer_ | RateLimitSeconds is the minimum interval between notifications for the<br />same (team, event) pair. Default: 300. Set to 0 to disable rate limiting. | 300 | Minimum: 0 <br />Optional: true <br /> |
 
 
@@ -1856,10 +2180,89 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `channelCount` _integer_ | ChannelCount is the number of configured notification channels. |  |  |
 | `lastDispatches` _[NotifyDispatchResult](#notifydispatchresult) array_ | LastDispatches records the most recent dispatch result per channel index. |  | Optional: true <br /> |
 | `observedGeneration` _integer_ | ObservedGeneration is the .metadata.generation this status reflects. |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions reflect the current state of the SwarmNotify. |  | Optional: true <br /> |
+
+
+#### SwarmPolicy
+
+
+
+SwarmPolicy defines platform-level guardrails enforced on all SwarmAgents
+in the namespace. Agent authors cannot weaken policy constraints.
+
+
+
+_Appears in:_
+- [SwarmPolicyList](#swarmpolicylist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `kubeswarm.io/v1alpha1` | | |
+| `kind` _string_ | `SwarmPolicy` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[SwarmPolicySpec](#swarmpolicyspec)_ |  |  |  |
+| `status` _[SwarmPolicyStatus](#swarmpolicystatus)_ |  |  |  |
+
+
+#### SwarmPolicyList
+
+
+
+SwarmPolicyList contains a list of SwarmPolicy.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `kubeswarm.io/v1alpha1` | | |
+| `kind` _string_ | `SwarmPolicyList` | | |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[SwarmPolicy](#swarmpolicy) array_ |  |  |  |
+
+
+#### SwarmPolicySpec
+
+
+
+SwarmPolicySpec defines the policy constraints.
+
+
+
+_Appears in:_
+- [SwarmPolicy](#swarmpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enforcementMode` _[PolicyEnforcementMode](#policyenforcementmode)_ | EnforcementMode controls whether violations cause admission rejection<br />(Enforce), admission warnings (Warn), or are only logged (Audit).<br />Default: Audit. | Audit | Enum: [Audit Warn Enforce] <br />Optional: true <br /> |
+| `limits` _[PolicyLimits](#policylimits)_ | Limits sets ceilings and floors on agent execution parameters. |  | Optional: true <br /> |
+| `tools` _[PolicyTools](#policytools)_ | Tools sets tool access restrictions. |  | Optional: true <br /> |
+| `output` _[PolicyOutput](#policyoutput)_ | Output sets minimum output validation requirements. |  | Optional: true <br /> |
+| `models` _[PolicyModels](#policymodels)_ | Models restricts which models agents may use. |  | Optional: true <br /> |
+| `requirements` _[PolicyRequirements](#policyrequirements)_ | Requirements defines boolean requirements that all agents must satisfy. |  | Optional: true <br /> |
+
+
+#### SwarmPolicyStatus
+
+
+
+SwarmPolicyStatus reports the compliance state of agents in the namespace.
+
+
+
+_Appears in:_
+- [SwarmPolicy](#swarmpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `agentCount` _integer_ | AgentCount is the total number of SwarmAgents in the namespace. |  |  |
+| `compliantCount` _integer_ | CompliantCount is the number of agents satisfying all policy constraints. |  |  |
+| `effectivePolicy` _[EffectivePolicySpec](#effectivepolicyspec)_ | EffectivePolicy is the merged result of all SwarmPolicies in the namespace. |  | Optional: true <br /> |
+| `observedGeneration` _integer_ | ObservedGeneration is the .metadata.generation this status reflects. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions reflect the policy controller's state. |  |  |
 
 
 #### SwarmRegistry
@@ -1902,23 +2305,6 @@ SwarmRegistryList contains a list of SwarmRegistry.
 | `items` _[SwarmRegistry](#swarmregistry) array_ |  |  |  |
 
 
-#### SwarmRegistryPolicy
-
-
-
-SwarmRegistryPolicy controls delegation safety for registry-resolved steps.
-
-
-
-_Appears in:_
-- [SwarmRegistrySpec](#swarmregistryspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `maxDepth` _integer_ | MaxDepth is the maximum agent-to-agent delegation depth.<br />Prevents runaway recursion. | 3 | Maximum: 20 <br />Minimum: 1 <br /> |
-| `allowCrossTeam` _boolean_ | AllowCrossTeam permits resolution of agents managed by other SwarmTeams.<br />Default false - only agents not owned by another team's inline roles. | false |  |
-
-
 #### SwarmRegistrySpec
 
 
@@ -1933,8 +2319,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `scope` _[RegistryScope](#registryscope)_ | Scope controls which SwarmAgents are indexed.<br />namespace-scoped: only SwarmAgents in the same namespace (default).<br />cluster-wide: all SwarmAgents cluster-wide (requires ClusterRole). | namespace-scoped | Enum: [namespace-scoped cluster-wide] <br /> |
-| `policy` _[SwarmRegistryPolicy](#swarmregistrypolicy)_ | Policy controls delegation safety. |  | Optional: true <br /> |
-| `mcpBindings` _[MCPBinding](#mcpbinding) array_ | MCPBindings maps capability IDs to MCP server URLs for this deployment.<br />Agents that declare mcpServers with capabilityRef have their URLs resolved<br />from this list at reconcile time. This allows cookbook-style agent definitions<br />to remain URL-free; operators supply the bindings per namespace. |  | Optional: true <br /> |
+| `maxDepth` _integer_ | MaxDepth is the maximum agent-to-agent delegation depth allowed for registry-resolved steps.<br />Prevents runaway recursion. | 3 | Maximum: 20 <br />Minimum: 1 <br />Optional: true <br /> |
+| `mcpBindings` _[MCPBinding](#mcpbinding) array_ | MCPBindings maps capability IDs to MCP server URLs for this deployment.<br />Agents that declare mcpServers with capabilityRef have their URLs resolved<br />from this list at reconcile time. This allows cookbook-style agent definitions<br />to remain URL-free; operators supply the bindings per namespace. |  | MaxItems: 50 <br />Optional: true <br /> |
 
 
 #### SwarmRegistryStatus
@@ -1951,9 +2337,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `indexedAgents` _integer_ | IndexedAgents is the total number of SwarmAgents indexed by this registry. |  |  |
-| `fleet` _[AgentFleetEntry](#agentfleetentry) array_ | Fleet is the list of SwarmAgents currently registered with this registry,<br />with per-agent readiness and token usage. Replaces the implicit<br />"all agents in namespace" model with an explicit opt-in list. |  | Optional: true <br /> |
+| `fleet` _[AgentFleetEntry](#agentfleetentry) array_ | Fleet is the list of SwarmAgents currently registered with this registry,<br />with per-agent readiness and token usage. Replaces the implicit<br />"all agents in namespace" model with an explicit opt-in list. |  | MaxItems: 1000 <br />Optional: true <br /> |
 | `lastRebuild` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastRebuild is the time the index was last rebuilt. |  | Optional: true <br /> |
-| `capabilities` _[IndexedCapability](#indexedcapability) array_ | Capabilities lists all capabilities indexed, with their associated agents and tags. |  | Optional: true <br /> |
+| `capabilities` _[IndexedCapability](#indexedcapability) array_ | Capabilities lists all capabilities indexed, with their associated agents and tags. |  | MaxItems: 200 <br />Optional: true <br /> |
 | `observedGeneration` _integer_ | ObservedGeneration is the .metadata.generation this status reflects. |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions reflect the current state of the SwarmRegistry. |  |  |
 
@@ -2040,9 +2426,9 @@ _Appears in:_
 | `prompt` _string_ | Prompt is the task text submitted to the agent for a standalone run.<br />Required when Agent is set. |  | Optional: true <br /> |
 | `teamGeneration` _integer_ | TeamGeneration is the SwarmTeam spec.generation at the time this run was<br />created. Allows correlating a run with the exact team spec that was in effect.<br />Only set for team runs. |  | Optional: true <br /> |
 | `input` _object (keys:string, values:string)_ | Input is the resolved input map for this run: team default inputs merged with<br />any per-trigger overrides supplied via swarm trigger --input or SwarmEvent.<br />Step inputs reference these values via "\{\{ .input.&lt;key&gt; \}\}". |  | Optional: true <br /> |
-| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline is a snapshot of the SwarmTeam pipeline DAG at trigger time.<br />Empty for routed-mode runs. |  | Optional: true <br /> |
+| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline is a snapshot of the SwarmTeam pipeline DAG at trigger time.<br />Empty for routed-mode runs. |  | MaxItems: 100 <br />Optional: true <br /> |
 | `defaultContextPolicy` _[StepContextPolicy](#stepcontextpolicy)_ | DefaultContextPolicy is a snapshot of the team's defaultContextPolicy at trigger time.<br />Applied to non-adjacent step references; per-step contextPolicy takes precedence. |  | Optional: true <br /> |
-| `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles is a snapshot of the SwarmTeam role definitions at trigger time.<br />Empty for routed-mode runs. |  | Optional: true <br /> |
+| `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles is a snapshot of the SwarmTeam role definitions at trigger time.<br />Empty for routed-mode runs. |  | MaxItems: 50 <br />Optional: true <br /> |
 | `output` _string_ | Output is a Go template expression that selects the final run result.<br />Example: "\{\{ .steps.summarize.output \}\}"<br />For routed-mode runs this defaults to "\{\{ .steps.route.output \}\}" at trigger time. |  | Optional: true <br /> |
 | `routing` _[SwarmTeamRoutingSpec](#swarmteamroutingspec)_ | Routing is a snapshot of the SwarmTeam routing config at trigger time.<br />Set when the team operates in routed mode. Mutually exclusive with Pipeline. |  | Optional: true <br /> |
 | `timeoutSeconds` _integer_ | TimeoutSeconds is the maximum wall-clock seconds this run may take.<br />Zero means no timeout. |  | Minimum: 1 <br />Optional: true <br /> |
@@ -2063,7 +2449,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `phase` _[SwarmRunPhase](#swarmrunphase)_ | Phase is the overall execution state. |  | Enum: [Pending Running Succeeded Failed] <br /> |
-| `steps` _[PipelineStepStatus](#pipelinestepstatus) array_ | Steps holds the per-step execution state for this run, including full<br />step outputs. Unlike SwarmTeam.Status, this is never reset - it is the<br />permanent record of what happened during this run. |  |  |
+| `steps` _[PipelineStepStatus](#pipelinestepstatus) array_ | Steps holds the per-step execution state for this run, including full<br />step outputs. Unlike SwarmTeam.Status, this is never reset - it is the<br />permanent record of what happened during this run. |  | MaxItems: 100 <br /> |
 | `output` _string_ | Output is the resolved final pipeline output once phase is Succeeded. |  |  |
 | `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | StartTime is when this run began executing. |  |  |
 | `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | CompletionTime is when this run reached a terminal phase (Succeeded or Failed). |  |  |
@@ -2126,7 +2512,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mcpAllowlist` _string array_ | MCPAllowlist is a list of URL prefixes. When set, the admission webhook rejects<br />SwarmAgent specs that reference MCP server URLs not matching any listed prefix.<br />Use this to prevent agents from calling arbitrary external MCP endpoints (T9).<br />Example: ["https://search.mcp.example.com/", "https://browser.mcp.example.com/"] |  | Optional: true <br /> |
+| `mcpAllowlist` _string array_ | MCPAllowlist is a list of URL prefixes. When set, the admission webhook rejects<br />SwarmAgent specs that reference MCP server URLs not matching any listed prefix.<br />Use this to prevent agents from calling arbitrary external MCP endpoints (T9).<br />Example: ["https://search.mcp.example.com/", "https://browser.mcp.example.com/"] |  | MaxItems: 50 <br />Optional: true <br /> |
 | `requireMCPAuth` _boolean_ | RequireMCPAuth: when true, the webhook rejects SwarmAgent specs that declare MCP<br />servers without an auth configuration (spec.mcpServers[*].auth.type must not be "none").<br />Ensures no agent can call an MCP server without verified credentials. |  | Optional: true <br /> |
 
 
@@ -2146,10 +2532,10 @@ _Appears in:_
 | `temperature` _string_ | Temperature controls response randomness (0.0–1.0). |  | Pattern: `^(0(\.[0-9]+)?\|1(\.0+)?)$` <br /> |
 | `outputFormat` _string_ | OutputFormat specifies the expected output format (e.g. "structured-json"). |  |  |
 | `memoryBackend` _[MemoryBackend](#memorybackend)_ | MemoryBackend defines where agent memory is stored. | in-context | Enum: [in-context vector-store redis] <br /> |
-| `fragments` _[PromptFragment](#promptfragment) array_ | Fragments is an ordered list of named prompt fragments composed into the agent system prompt.<br />Fragments from all referenced SwarmSettings are applied in settingsRefs list order.<br />When the same fragment name appears in multiple settings, the last occurrence wins. |  | Optional: true <br /> |
+| `fragments` _[PromptFragment](#promptfragment) array_ | Fragments is an ordered list of named prompt fragments composed into the agent system prompt.<br />Fragments from all referenced SwarmSettings are applied in settingsRefs list order.<br />When the same fragment name appears in multiple settings, the last occurrence wins. |  | MaxItems: 50 <br />Optional: true <br /> |
 | `promptFragments` _[PromptFragments](#promptfragments)_ | PromptFragments is deprecated. Use Fragments instead.<br />When both are set, Fragments takes precedence and PromptFragments is ignored.<br />Retained for backward compatibility; will be removed in v1beta1. |  | Optional: true <br /> |
 | `security` _[SwarmSettingsSecurity](#swarmsettingssecurity)_ | Security configures MCP server access policy enforced by the admission webhook.<br />The strictest policy across all referenced SwarmSettings wins. |  | Optional: true <br /> |
-| `observability` _[SettingsObservability](#settingsobservability)_ | Observability configures namespace-level observability settings.<br />Overrides cluster-level (Helm) defaults; can be overridden per-agent. |  | Optional: true <br /> |
+| `auditLog` _[AuditLogConfig](#auditlogconfig)_ | Observability configures namespace-level observability settings.<br />Overrides cluster-level (Helm) defaults; can be overridden per-agent.<br />AuditLog configures the structured audit trail at namespace level.<br />Overrides cluster-level (Helm) audit config; can be overridden per-agent. |  | Optional: true <br /> |
 | `reasoning` _[ReasoningDefaults](#reasoningdefaults)_ | Reasoning sets the namespace-wide default reasoning config for SwarmAgents.<br />Per-agent spec.reasoning overrides per the RFC-0012 cascade rules.<br />Uses ReasoningDefaults (not ReasoningConfig) so Mode has no CRD-level<br />default - an unset cascade means "no namespace default", distinct from<br />"namespace default Disabled". |  | Optional: true <br /> |
 
 
@@ -2233,22 +2619,6 @@ _Appears in:_
 | `default` _string_ | Default is the value applied when Required is false and the parameter<br />is not provided in spec.input. |  | Optional: true <br /> |
 
 
-#### SwarmTeamLimits
-
-
-
-SwarmTeamLimits constrains team-level resource usage.
-
-
-
-_Appears in:_
-- [SwarmTeamSpec](#swarmteamspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `maxDailyTokens` _integer_ | MaxDailyTokens is the rolling 24-hour token budget across the whole team pipeline.<br />Zero means no daily limit. |  | Minimum: 1 <br /> |
-
-
 #### SwarmTeamList
 
 
@@ -2305,12 +2675,12 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `role` _string_ | Role references a role name in spec.roles. The step name equals the role name. |  | MinLength: 1 <br />Required: true <br /> |
 | `inputs` _object (keys:string, values:string)_ | Inputs is a map of input key -> Go template expression referencing pipeline<br />inputs or earlier step outputs. Example: "\{\{ .steps.research.output \}\}" |  |  |
-| `dependsOn` _string array_ | DependsOn lists role names (step names) that must complete before this step runs. |  |  |
+| `dependsOn` _string array_ | DependsOn lists role names (step names) that must complete before this step runs. |  | MaxItems: 20 <br /> |
 | `if` _string_ | If is an optional Go template expression. When set, the step only executes if the<br />expression evaluates to a truthy value. A falsy result marks the step Skipped. |  |  |
 | `loop` _[LoopSpec](#loopspec)_ | Loop makes this step repeat until Condition evaluates to false or MaxIterations is reached. |  |  |
 | `outputSchema` _string_ | OutputSchema is an optional JSON Schema string that constrains this step's output. |  |  |
 | `validate` _[StepValidation](#stepvalidation)_ | Validate configures optional output validation for this step.<br />When set, the step enters Validating phase after the agent completes and only<br />transitions to Succeeded once all configured checks pass. |  | Optional: true <br /> |
-| `outputArtifacts` _[ArtifactSpec](#artifactspec) array_ | OutputArtifacts declares file artifacts this step produces.<br />The agent writes each artifact to $AGENT_ARTIFACT_DIR/&lt;name&gt; after its task.<br />Artifact URLs are stored in PipelineStepStatus.Artifacts and available to<br />downstream steps via "\{\{ .steps.&lt;stepName&gt;.artifacts.&lt;name&gt; \}\}". |  | Optional: true <br /> |
+| `outputArtifacts` _[ArtifactSpec](#artifactspec) array_ | OutputArtifacts declares file artifacts this step produces.<br />The agent writes each artifact to $AGENT_ARTIFACT_DIR/&lt;name&gt; after its task.<br />Artifact URLs are stored in PipelineStepStatus.Artifacts and available to<br />downstream steps via "\{\{ .steps.&lt;stepName&gt;.artifacts.&lt;name&gt; \}\}". |  | MaxItems: 20 <br />Optional: true <br /> |
 | `inputArtifacts` _object (keys:string, values:string)_ | InputArtifacts maps a local artifact name to an upstream step's artifact.<br />The value format is "&lt;stepName&gt;.&lt;artifactName&gt;".<br />The resolved URL is injected via AGENT_INPUT_ARTIFACTS env var as a JSON map. |  | Optional: true <br /> |
 | `registryLookup` _[RegistryLookupSpec](#registrylookupspec)_ | RegistryLookup resolves the executing agent by capability at runtime.<br />The SwarmRun controller resolves this before the step starts and records<br />the resolved agent in status.resolvedAgent. |  | Optional: true <br /> |
 | `contextPolicy` _[StepContextPolicy](#stepcontextpolicy)_ | ContextPolicy controls how this step's output is prepared before injection<br />into downstream step prompts. Defaults to strategy=full (verbatim, current behaviour). |  | Optional: true <br /> |
@@ -2339,7 +2709,7 @@ _Appears in:_
 | `tools` _[AgentTools](#agenttools)_ | Tools groups MCP server connections and inline webhook tools for an inline role.<br />Matches the SwarmAgent spec.tools structure. |  | Optional: true <br /> |
 | `runtime` _[AgentRuntime](#agentruntime)_ | Runtime groups replica count, autoscaling, and resources for an inline role. |  | Optional: true <br /> |
 | `limits` _[GuardrailLimits](#guardraillimits)_ | Limits constrains per-agent resource usage for an inline role definition. |  | Optional: true <br /> |
-| `canDelegate` _string array_ | CanDelegate lists role names this role is permitted to call via delegate().<br />Empty means this is a leaf role - it cannot delegate further. |  | Optional: true <br /> |
+| `canDelegate` _string array_ | CanDelegate lists role names this role is permitted to call via delegate().<br />Empty means this is a leaf role - it cannot delegate further. |  | MaxItems: 20 <br />Optional: true <br /> |
 | `settings` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Settings references SwarmSettings objects whose fragments are composed into this<br />role's system prompt, in list order. Only applies to inline roles.<br />For roles referencing an external SwarmAgent, set settings on the SwarmAgent CR directly. |  | Optional: true <br /> |
 | `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envfromsource-v1-core) array_ | EnvFrom injects environment variables from Secrets or ConfigMaps into the agent pods<br />created for this role. Use this to supply API keys on a per-role basis.<br />Only applies to inline roles. |  | Optional: true <br /> |
 | `plugins` _[AgentPlugins](#agentplugins)_ | Plugins configures external gRPC provider or queue overrides for this role (RFC-0025).<br />Only applies to inline roles. |  | Optional: true <br /> |
@@ -2385,7 +2755,6 @@ _Appears in:_
 | `model` _string_ | Model is the LLM model used for the router call.<br />A lightweight model (e.g. haiku) is sufficient and recommended.<br />Defaults to the operator-wide default model when omitted. |  | MinLength: 1 <br />Optional: true <br /> |
 | `systemPrompt` _string_ | SystemPrompt overrides the default router system prompt.<br />Use \{\{ .Capabilities \}\} to embed the capability list and<br />\{\{ .Input \}\} to embed the task input in a custom prompt. |  | Optional: true <br /> |
 | `fallback` _string_ | Fallback is the name of a standalone SwarmAgent to use when no capability<br />matches or the router LLM fails to select one.<br />When absent and no match is found, the run fails with RoutingFailed. |  | Optional: true <br /> |
-| `maxHops` _integer_ | MaxHops is the maximum number of sequential routing decisions per run.<br />Reserved for future multi-hop support. Must be 1 in this version. | 1 | Maximum: 1 <br />Minimum: 1 <br />Optional: true <br /> |
 
 
 #### SwarmTeamScaleToZero
@@ -2420,13 +2789,13 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `entry` _string_ | Entry is the role name that receives external tasks in dynamic mode.<br />Exactly one role should be the entry point for dynamic teams.<br />In pipeline mode (spec.pipeline set), entry is optional. |  | Optional: true <br /> |
 | `output` _string_ | Output is a Go template expression that selects the final pipeline result.<br />Example: "\{\{ .steps.summarize.output \}\}"<br />Only used in pipeline mode. |  | Optional: true <br /> |
-| `inputs` _[SwarmTeamInputSpec](#swarmteaminputspec) array_ | Inputs defines the formal schema for pipeline input parameters.<br />When set, required parameters are enforced and defaults are applied before<br />an SwarmRun starts executing. Steps reference these values via "\{\{ .input.&lt;name&gt; \}\}". |  | Optional: true <br /> |
+| `inputs` _[SwarmTeamInputSpec](#swarmteaminputspec) array_ | Inputs defines the formal schema for pipeline input parameters.<br />When set, required parameters are enforced and defaults are applied before<br />an SwarmRun starts executing. Steps reference these values via "\{\{ .input.&lt;name&gt; \}\}". |  | MaxItems: 20 <br />Optional: true <br /> |
 | `input` _object (keys:string, values:string)_ | Input is the initial data passed into the pipeline.<br />Step inputs can reference these values via "\{\{ .input.&lt;key&gt; \}\}".<br />Only used in pipeline mode. |  | Optional: true <br /> |
 | `timeoutSeconds` _integer_ | TimeoutSeconds is the maximum wall-clock seconds the pipeline may run.<br />Zero means no timeout. Only used in pipeline mode. |  | Minimum: 1 <br />Optional: true <br /> |
 | `maxTokens` _integer_ | MaxTokens is the total token budget for the entire pipeline run.<br />Zero means no limit. Only used in pipeline mode. |  | Minimum: 1 <br />Optional: true <br /> |
-| `limits` _[SwarmTeamLimits](#swarmteamlimits)_ | Limits constrains team-level resource usage. |  | Optional: true <br /> |
-| `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles defines the roles that make up this team.<br />At least one role is required unless spec.routing is set (routed mode). |  | Optional: true <br /> |
-| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline defines an optional DAG of steps that drive ordered execution.<br />When set, the team operates in pipeline mode (job semantics).<br />When unset, the team operates in dynamic mode (service semantics). |  | Optional: true <br /> |
+| `maxDailyTokens` _integer_ | MaxDailyTokens is the rolling 24-hour token budget across the whole team pipeline.<br />Zero means no daily limit. |  | Minimum: 1 <br />Optional: true <br /> |
+| `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles defines the roles that make up this team.<br />At least one role is required unless spec.routing is set (routed mode). |  | MaxItems: 50 <br />Optional: true <br /> |
+| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline defines an optional DAG of steps that drive ordered execution.<br />When set, the team operates in pipeline mode (job semantics).<br />When unset, the team operates in dynamic mode (service semantics). |  | MaxItems: 100 <br />Optional: true <br /> |
 | `defaultContextPolicy` _[StepContextPolicy](#stepcontextpolicy)_ | DefaultContextPolicy is applied to any step's output when it is referenced<br />by a non-adjacent downstream step. A step is considered adjacent when it<br />appears in the consuming step's dependsOn list, or is the immediately<br />preceding step when dependsOn is absent.<br />Per-step contextPolicy takes precedence over this default.<br />When unset, strategy=full is used for all steps (current behaviour). |  | Optional: true <br /> |
 | `successfulRunsHistoryLimit` _integer_ | SuccessfulRunsHistoryLimit is the number of successful SwarmRun objects to<br />retain for this team. Oldest runs beyond this limit are deleted automatically.<br />Set to 0 to delete successful runs immediately after completion. | 10 | Minimum: 0 <br />Optional: true <br /> |
 | `failedRunsHistoryLimit` _integer_ | FailedRunsHistoryLimit is the number of failed SwarmRun objects to retain. | 3 | Minimum: 0 <br />Optional: true <br /> |
@@ -2517,6 +2886,26 @@ _Appears in:_
 | `outputTokens` _integer_ | OutputTokens is the total number of final-answer/completion tokens generated<br />by the LLM. This does NOT include thinking tokens - those are counted<br />separately in ThinkingTokens. |  |  |
 | `thinkingTokens` _integer_ | ThinkingTokens is the number of tokens spent on the model's internal<br />reasoning pass, billed at the provider's thinking-token rate.<br />Counted separately from OutputTokens, not additive. Total tokens per<br />step is InputTokens + OutputTokens + ThinkingTokens; consumers must sum<br />all three to avoid undercounting. Zero on non-reasoning calls. For<br />multi-turn steps (tool-use loops), this is the sum across all turns in<br />the step. |  | Optional: true <br /> |
 | `totalTokens` _integer_ | TotalTokens is InputTokens + OutputTokens + ThinkingTokens, provided for<br />convenient display. |  |  |
+| `model` _string_ | Model identifies which model generated this usage record.<br />Populated for advisor calls to enable per-model cost attribution. |  | Optional: true <br /> |
+
+
+#### ToolAgentConnectionStatus
+
+
+
+ToolAgentConnectionStatus reports the status of one tool-role agent connection.
+
+
+
+_Appears in:_
+- [SwarmAgentStatus](#swarmagentstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name matches the AgentConnection name. |  |  |
+| `ready` _boolean_ | Ready indicates the target agent exists and has ready replicas. |  |  |
+| `trust` _[ToolTrustLevel](#tooltrustlevel)_ | Trust is the trust level assigned to this connection. |  | Enum: [internal external sandbox] <br />Optional: true <br /> |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastTransitionTime is the last time Ready changed. |  |  |
 
 
 #### ToolPermissions
@@ -2532,8 +2921,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `allow` _string array_ | Allow is an allowlist of tool calls in "&lt;server-name&gt;/&lt;tool-name&gt;" format.<br />Wildcards are supported: "filesystem/*" allows all tools from the filesystem server.<br />When set, only listed tool calls are permitted. Deny takes precedence over allow. |  | Optional: true <br /> |
-| `deny` _string array_ | Deny is a denylist of tool calls in "&lt;server-name&gt;/&lt;tool-name&gt;" format.<br />Wildcards are supported: "shell/*" denies all shell tools.<br />Deny takes precedence over allow when both match. |  | Optional: true <br /> |
+| `allow` _string array_ | Allow is an allowlist of tool calls in "&lt;server-name&gt;/&lt;tool-name&gt;" format.<br />Wildcards are supported: "filesystem/*" allows all tools from the filesystem server.<br />When set, only listed tool calls are permitted. Deny takes precedence over allow. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `deny` _string array_ | Deny is a denylist of tool calls in "&lt;server-name&gt;/&lt;tool-name&gt;" format.<br />Wildcards are supported: "shell/*" denies all shell tools.<br />Deny takes precedence over allow when both match. |  | MaxItems: 100 <br />Optional: true <br /> |
 | `trust` _[ToolTrustPolicy](#tooltrustpolicy)_ | Trust configures the default trust level and input validation policy. |  | Optional: true <br /> |
 
 
@@ -2549,7 +2938,11 @@ _Validation:_
 
 _Appears in:_
 - [AgentConnection](#agentconnection)
+- [EffectivePolicySpec](#effectivepolicyspec)
 - [MCPToolSpec](#mcptoolspec)
+- [PolicyTools](#policytools)
+- [SwarmAgentMCPStatus](#swarmagentmcpstatus)
+- [ToolAgentConnectionStatus](#toolagentconnectionstatus)
 - [ToolTrustPolicy](#tooltrustpolicy)
 - [WebhookToolSpec](#webhooktoolspec)
 
@@ -2574,7 +2967,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `default` _[ToolTrustLevel](#tooltrustlevel)_ | Default is the trust level applied to tools and agents that do not declare<br />an explicit trust field. Defaults to external. | external | Enum: [internal external sandbox] <br />Optional: true <br /> |
-| `enforceInputValidation` _boolean_ | EnforceInputValidation rejects tool calls whose arguments do not match the<br />tool's declared schema when the tool's effective trust level is sandbox. |  | Optional: true <br /> |
 
 
 #### TriggerSourceType
@@ -2609,7 +3001,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `provider` _[VectorStoreProvider](#vectorstoreprovider)_ | Provider is the vector database to use. |  | Enum: [qdrant pinecone weaviate] <br /> |
+| `provider` _[VectorStoreProvider](#vectorstoreprovider)_ | Provider is the vector database to use. |  | Enum: [qdrant pgvector] <br /> |
 | `endpoint` _string_ | Endpoint is the base URL of the vector database (e.g. "http://qdrant:6333"). |  | Required: true <br /> |
 | `collection` _string_ | Collection is the collection/index name to store memories in. | agent-memories |  |
 | `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | SecretRef optionally names a Secret whose VECTOR_STORE_API_KEY is injected into agent pods. |  |  |
@@ -2623,7 +3015,7 @@ _Underlying type:_ _string_
 VectorStoreProvider names a supported vector database.
 
 _Validation:_
-- Enum: [qdrant pinecone weaviate]
+- Enum: [qdrant pgvector]
 
 _Appears in:_
 - [VectorStoreMemoryConfig](#vectorstorememoryconfig)
@@ -2631,8 +3023,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `qdrant` |  |
-| `pinecone` |  |
-| `weaviate` |  |
+| `pgvector` |  |
 
 
 #### WebhookChannelSpec
@@ -2651,7 +3042,7 @@ _Appears in:_
 | `url` _string_ | URL is the webhook endpoint as a literal string. |  | Optional: true <br /> |
 | `urlFrom` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretkeyselector-v1-core)_ | URLFrom reads the URL from a Secret key. Takes precedence over URL. |  | Optional: true <br /> |
 | `method` _string_ | Method is the HTTP method. Defaults to POST. | POST | Enum: [GET POST PUT PATCH] <br /> |
-| `headers` _[WebhookHeader](#webhookheader) array_ | Headers are additional HTTP headers included in every request. |  | Optional: true <br /> |
+| `headers` _[WebhookHeader](#webhookheader) array_ | Headers are additional HTTP headers included in every request. |  | MaxItems: 20 <br />Optional: true <br /> |
 
 
 #### WebhookHeader

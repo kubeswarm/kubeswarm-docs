@@ -4,7 +4,7 @@ sidebar_label: "FAQ"
 description: "kubeswarm FAQ - frequently asked questions about Kubernetes agent orchestration, LLM providers, MCP tools, budget management and agent-to-agent connections."
 ---
 
-# kubeswarm FAQ - Orchestrate Agents on Kubernetes
+# FAQ
 
 ## Do I need a cloud LLM API key?
 
@@ -12,7 +12,7 @@ Frequently asked questions about kubeswarm - the Kubernetes operator for agent o
 
 ## What models are supported?
 
-Any model accessible via Anthropic, OpenAI, Google Gemini APIs, or any OpenAI-compatible endpoint (Ollama, vLLM, LM Studio). See [LLM Providers](/integrations/llm-providers).
+Any model accessible via Anthropic, OpenAI, Google Gemini APIs, or any OpenAI-compatible endpoint (Ollama, vLLM, LM Studio). See [LLM Providers](/operations/llm-providers).
 
 ## Does kubeswarm run the LLM?
 
@@ -24,7 +24,7 @@ An operator-managed SSE server that exposes SwarmAgent capabilities as MCP tools
 
 ## How do I manage API keys?
 
-Use native Kubernetes Secrets. Reference them via `spec.apiKeyRef` (single key) or `spec.envFrom` (multiple keys). See [API Key Management](/security/api-key-management).
+Use native Kubernetes Secrets. Reference them via `spec.apiKeyRef` (single key) or `spec.envFrom` (multiple keys). See [API Key Management](/safety/api-key-management).
 
 ## Is there a custom secret CRD?
 
@@ -32,11 +32,11 @@ No. kubeswarm uses native Kubernetes Secrets only. No wrapper CRD.
 
 ## How does budget enforcement work?
 
-The operator tracks rolling 24h token usage per agent. When `spec.guardrails.limits.dailyTokens` is exceeded, replicas are scaled to 0 and a `BudgetExceeded` condition is set. Replicas restore automatically when the window rotates. See [Budget Management](/scaling/budget-management).
+The operator tracks rolling 24h token usage per agent. When `spec.guardrails.limits.dailyTokens` is exceeded, replicas are scaled to 0 and a `BudgetExceeded` condition is set. Replicas restore automatically when the window rotates. See [Budget Management](/finops/budget-management).
 
 ## Can agents call other agents?
 
-Yes, via the `spec.agents[]` section. See [Agent-to-Agent](/concepts/agent-to-agent).
+Yes, via the `spec.agents[]` section. See [Agent-to-Agent](/tools/agent-to-agent).
 
 ## What happens if an MCP server goes down?
 

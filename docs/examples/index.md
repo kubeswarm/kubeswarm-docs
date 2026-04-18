@@ -5,7 +5,7 @@ sidebar_label: "Overview"
 description: Production-ready example recipes from the kubeswarm cookbook.
 ---
 
-# kubeswarm Examples - Agent Cookbook Recipes
+# Examples
 
 Production-ready kubeswarm cookbook recipes showcasing every major agent orchestration feature on Kubernetes.
 

@@ -114,9 +114,9 @@ const config: Config = {
           title: "Docs",
           items: [
             { label: "Quick Start", to: "/quick-start" },
-            { label: "Integrations", to: "/integrations" },
-            { label: "Security", to: "/security/overview" },
-            { label: "Custom Resources", to: "/custom-resources" },
+            { label: "Safety & Governance", to: "/safety/overview" },
+            { label: "Custom Resources", to: "/reference/custom-resources" },
+            { label: "API Reference", to: "/reference/api" },
           ],
         },
         {

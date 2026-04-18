@@ -98,7 +98,7 @@ kubectl get swrun hello-run -o jsonpath='{.status.output}'
 
 ## Next steps
 
-- [Connect MCP tools](/getting-started/connect-mcp-tools) to give your agent capabilities
-- [Create a pipeline](/getting-started/create-a-pipeline) with multiple agents
-- Try [cloud providers](/integrations/llm-providers) (Anthropic, OpenAI, Gemini)
+- [Connect MCP tools](/tools/connect-mcp-tools) to give your agent capabilities
+- [Create a pipeline](/orchestration/pipelines) with multiple agents
+- Try [cloud providers](/operations/llm-providers) (Anthropic, OpenAI, Gemini)
 - Browse [cookbook recipes](/examples/) for production patterns

@@ -4,7 +4,7 @@ sidebar_label: "Features"
 description: "kubeswarm features - semantic health checks, agent discovery, audit trail, autoscaling, multi-provider, vector memory, cost control, security and more."
 ---
 
-# kubeswarm Features
+# Features
 
 Everything agents need to run in production on Kubernetes.
 
@@ -31,8 +31,8 @@ spec:
 
 Falls back to `ping` mode for cost-sensitive deployments - a simple connectivity check with zero LLM calls.
 
-- [Guardrails and Trust](/security/guardrails) - configure what happens when health checks fail
-- [Notifications](/integrations/notifications) - alert on degraded agents via Slack, email, or webhook
+- [Guardrails and Trust](/safety/guardrails) - configure what happens when health checks fail
+- [Notifications](/operations/notifications) - alert on degraded agents via Slack, email, or webhook
 
 ---
 
@@ -51,8 +51,8 @@ spec:
 
 Any agent or team can discover and call `sql-query` without knowing which pod serves it. The registry tracks readiness, model, and daily token usage per agent.
 
-- [Agent-to-Agent](/concepts/agent-to-agent) - how capability-based routing works
-- [Custom Resources: SwarmRegistry](/custom-resources/) - registry field reference
+- [Agent-to-Agent](/tools/agent-to-agent) - how capability-based routing works
+- [Custom Resources: SwarmRegistry](/reference/custom-resources/) - registry field reference
 
 ---
 
@@ -70,9 +70,9 @@ swarm audit tree evt-abc123
 
 Audit events emit to a configurable sink (stdout, Redis Stream, or webhook). Opt-in at cluster, namespace, or agent level.
 
-- [Audit Trail](/observability/audit-trail) - full configuration guide, event schema, and CLI reference
-- [Budget Management](/scaling/budget-management) - per-action token tracking and cost attribution
-- [Custom Resources: SwarmRun](/custom-resources/) - run status field reference
+- [Audit Trail](/operations/audit-trail) - full configuration guide, event schema, and CLI reference
+- [Budget Management](/finops/budget-management) - per-action token tracking and cost attribution
+- [Custom Resources: SwarmRun](/reference/custom-resources/) - run status field reference
 
 ---
 
@@ -94,7 +94,7 @@ spec:
 
 The operator creates KEDA ScaledObjects automatically. No KEDA YAML to write - just set the fields on your SwarmAgent.
 
-- [Autoscaling (KEDA)](/scaling/autoscaling) - full configuration guide and prerequisites
+- [Autoscaling (KEDA)](/finops/autoscaling) - full configuration guide and prerequisites
 
 ---
 
@@ -114,10 +114,10 @@ Provider is inferred from the model name and API key. The agent runtime handles 
 
 The same principle applies at every layer: you provide your own Redis (or any queue via gRPC), your own vector store (pgvector, Qdrant), your own artifact storage (S3, GCS). The operator never bundles infrastructure - it connects to yours.
 
-- [LLM Providers](/integrations/llm-providers) - supported providers, configuration, and model routing
-- [Task Queue](/integrations/task-queue) - Redis Streams or custom queue via gRPC
-- [Vector Stores](/integrations/vector-stores) - pgvector, Qdrant, or custom via gRPC
-- [gRPC Plugins](/advanced/grpc-plugins) - escape hatch for any custom backend
+- [LLM Providers](/operations/llm-providers) - supported providers, configuration, and model routing
+- [Task Queue](/operations/task-queue) - Redis Streams or custom queue via gRPC
+- [Vector Stores](/intelligence/memory) - pgvector, Qdrant, or custom via gRPC
+- [gRPC Plugins](/operations/grpc-plugins) - escape hatch for any custom backend
 
 ---
 
@@ -140,8 +140,8 @@ spec:
 
 The agent runtime retrieves relevant prior findings before each tool call and stores summaries after. Memory persists across tasks and pod restarts.
 
-- [Vector Stores](/integrations/vector-stores) - backend configuration for Qdrant, Pinecone, Weaviate
-- [Custom Resources: SwarmMemory](/custom-resources/) - memory field reference
+- [Vector Stores](/intelligence/memory) - backend configuration for Qdrant, Pinecone, Weaviate
+- [Custom Resources: SwarmMemory](/reference/custom-resources/) - memory field reference
 
 ---
 
@@ -167,8 +167,8 @@ spec:
 
 Budget alerts fire via Slack, email, or webhook before you hit the wall. Per-action token tracking in the audit trail lets you identify which tools and agents drive cost.
 
-- [Budget Management](/scaling/budget-management) - full configuration and enforcement modes
-- [Custom Resources: SwarmBudget](/custom-resources/) - budget field reference
+- [Budget Management](/finops/budget-management) - full configuration and enforcement modes
+- [Custom Resources: SwarmBudget](/reference/custom-resources/) - budget field reference
 
 ---
 
@@ -203,8 +203,8 @@ spec:
 
 **Dynamic** - agents delegate to each other at runtime using the built-in `delegate()` tool.
 
-- [Orchestration](/concepts/orchestration) - how orchestration modes work
-- [Custom Resources: SwarmTeam](/custom-resources/) - team field reference
+- [Orchestration](/orchestration/overview) - how orchestration modes work
+- [Custom Resources: SwarmTeam](/reference/custom-resources/) - team field reference
 
 ---
 
@@ -254,10 +254,10 @@ spec:
 
 Every agent pod runs with `runAsNonRoot`, `readOnlyRootFilesystem`, and `capabilities: drop: ["ALL"]`. The admission webhook rejects agents that reference unauthenticated MCP servers when `requireMCPAuth` is enabled at the namespace level. API keys are always Kubernetes Secrets - never inlined in YAML.
 
-- [Security Overview](/security/overview) - threat model and security architecture
-- [Guardrails and Trust](/security/guardrails) - tool permissions and trust model
-- [MCP Policy](/security/mcp-policy) - MCP server allowlists and auth enforcement
-- [Network Policies](/security/network-policies) - agent pod network isolation
+- [Security Overview](/safety/overview) - threat model and security architecture
+- [Guardrails and Trust](/safety/guardrails) - tool permissions and trust model
+- [MCP Policy](/safety/mcp-policy) - MCP server allowlists and auth enforcement
+- [Network Policies](/safety/network-policies) - agent pod network isolation
 
 ---
 
@@ -280,7 +280,7 @@ spec:
   concurrencyPolicy: Forbid
 ```
 
-- [Event Triggers](/advanced/event-triggers) - schedules, webhooks, and chained events
+- [Event Triggers](/orchestration/event-triggers) - schedules, webhooks, and chained events
 
 ---
 
@@ -309,7 +309,7 @@ spec:
     maxPerWindow: 5
 ```
 
-- [Notifications](/integrations/notifications) - channel configuration and event types
+- [Notifications](/operations/notifications) - channel configuration and event types
 
 ---
 
@@ -327,7 +327,7 @@ spec:
         model: claude-haiku-4-5-20251001
 ```
 
-- [Loop Policy](/advanced/loop-policy) - compression, deduplication, and memory configuration
+- [Loop Policy](/intelligence/loop-policy) - compression, deduplication, and memory configuration
 
 ---
 
@@ -355,4 +355,4 @@ spec:
         report: "researcher.report"
 ```
 
-- [Artifact Storage](/integrations/artifact-storage) - S3 and GCS configuration
+- [Artifact Storage](/operations/artifact-storage) - S3 and GCS configuration
