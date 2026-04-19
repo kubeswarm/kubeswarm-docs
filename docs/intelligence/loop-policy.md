@@ -60,7 +60,7 @@ The model can call the built-in `sandbox_recall` tool to retrieve the full resul
 Results under the threshold pass through unchanged. The sandbox is ephemeral - discarded when the task completes.
 
 :::tip When to enable sandbox
-Enable sandbox for agents that call tools returning large payloads (search results, database queries, API responses). For agents with small tool results (<2KB), sandboxing adds no value.
+Enable sandbox for agents that call tools returning large payloads (search results, database queries, API responses). For agents with small tool results (under 2KB), sandboxing adds no value.
 :::
 
 ## Semantic Dedup
