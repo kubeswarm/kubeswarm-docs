@@ -283,6 +283,7 @@ _Appears in:_
 | `dedup` _boolean_ | Dedup skips tool calls whose fingerprint (tool name + args hash) was already<br />executed in the current task. The dedup set is task-local and discarded on completion. |  | Optional: true <br /> |
 | `compression` _[LoopCompressionConfig](#loopcompressionconfig)_ | Compression configures in-loop context compression. When set, the runner summarises<br />older conversation turns when accumulated tokens exceed the threshold, allowing the<br />agent to run beyond the model's context window. |  | Optional: true <br /> |
 | `memory` _[AgentLoopMemory](#agentloopmemory)_ | Memory configures vector memory read/write during the tool-use loop.<br />Requires a SwarmMemory with a vector backend referenced via memory.ref. |  | Optional: true <br /> |
+| `sandbox` _[LoopSandboxConfig](#loopsandboxconfig)_ | Sandbox configures tool result sandboxing (RFC-0054). When set, large tool<br />results are stored in a per-task sandbox and replaced with compact digests.<br />The LLM retrieves full results on demand via the sandbox_recall built-in tool.<br />Nil means sandboxing is disabled (default). |  | Optional: true <br /> |
 
 
 #### AgentObservability
@@ -910,6 +911,27 @@ _Appears in:_
 | `timeoutSeconds` _integer_ | TimeoutSeconds is the maximum time allowed for the compression model call.<br />If exceeded compression is skipped and a CompressionTimeout warning event is recorded. | 30 | Optional: true <br /> |
 | `contextWindow` _integer_ | ContextWindow explicitly sets the model's context window size in tokens.<br />When set, overrides provider metadata and the built-in model map.<br />Useful for custom or private model endpoints. |  | Optional: true <br /> |
 | `instructions` _string_ | Instructions overrides the built-in system prompt for the compression call. |  | Optional: true <br /> |
+
+
+#### LoopSandboxConfig
+
+
+
+LoopSandboxConfig configures tool result sandboxing (RFC-0054).
+When non-nil on AgentLoopPolicy, tool results exceeding ThresholdBytes are
+stored in a per-task sandbox and replaced with a compact digest. The LLM
+retrieves full results on demand via the built-in sandbox_recall tool.
+
+
+
+_Appears in:_
+- [AgentLoopPolicy](#agentlooppolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `thresholdBytes` _integer_ | ThresholdBytes is the minimum result size (in bytes) that triggers<br />sandboxing. Results smaller than this pass through unchanged. | 2048 | Maximum: 1.048576e+06 <br />Minimum: 256 <br />Optional: true <br /> |
+| `previewBytes` _integer_ | PreviewBytes is the number of bytes included in the digest preview.<br />Truncated at a valid UTF-8 boundary with a "(truncated)" marker. | 200 | Maximum: 4096 <br />Minimum: 50 <br />Optional: true <br /> |
+| `maxTotalBytes` _integer_ | MaxTotalBytes caps the total bytes stored in the per-task sandbox.<br />When exceeded, new results pass through unsandboxed (fail-open). | 52428800 | Maximum: 2.68435456e+08 <br />Minimum: 1.048576e+06 <br />Optional: true <br /> |
 
 
 #### LoopSpec

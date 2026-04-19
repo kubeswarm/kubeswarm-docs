@@ -16,6 +16,7 @@ kubeswarm is a Kubernetes operator that manages LLM-powered agents as first-clas
 - **Vendor-agnostic** - no vendor lock-in at any layer. LLM providers, task queues, vector stores, and artifact backends are all pluggable interfaces. Swap Anthropic for OpenAI, Redis for SQS, Qdrant for pgvector - the operator doesn't care. Bring your own infrastructure.
 - **Security-first** - every agent pod runs as non-root with read-only filesystem, dropped capabilities, and network policies. API keys live in Kubernetes Secrets, never in YAML. Tool allow/deny lists, per-tool trust levels, and prompt injection defenses are built in - not bolted on.
 - **Hard limits, not soft warnings** - SwarmBudget enforces daily token limits with a hard stop. When the budget is exhausted, tasks are rejected - not logged and ignored. Circuit breakers trip on consecutive failures. Cost control is a first-class primitive.
+- **Token-efficient by default** - tool result sandboxing intercepts large outputs before they enter the LLM context, replacing them with compact digests. Combined with semantic dedup and in-loop compression, agents use 50-90% fewer tokens on tool-heavy tasks.
 - **Scale to zero, scale to thousands** - KEDA-based autoscaling manages agent replicas. Pods scale to zero when idle and spin up on demand. Redis Streams distribute tasks across replicas with consumer groups. The operator itself is stateless.
 
 ## What kubeswarm does for agent teams

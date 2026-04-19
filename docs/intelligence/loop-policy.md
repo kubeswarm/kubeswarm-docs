@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
 sidebar_label: "Loop Policy"
-description: "kubeswarm loop policy for deep research agents - semantic dedup, in-loop context compression and vector memory for long-running tasks on Kubernetes."
+description: "kubeswarm loop policy for deep research agents - tool result sandboxing, semantic dedup, in-loop context compression and vector memory for long-running tasks on Kubernetes."
 ---
 
 # Loop Policy
 
-The kubeswarm loop policy enables runtime hooks inside the agent tool-use loop for long-running research tasks on Kubernetes. Semantic dedup, context compression and vector memory - all opt-in and fail-open.
+The kubeswarm loop policy enables runtime hooks inside the agent tool-use loop for long-running research tasks on Kubernetes. Tool result sandboxing, semantic dedup, context compression and vector memory - all opt-in and fail-open.
 
 ## Configuration
 
@@ -15,6 +15,10 @@ spec:
   runtime:
     loop:
       dedup: true
+      sandbox:
+        thresholdBytes: 2048
+        previewBytes: 200
+        maxTotalBytes: 52428800
       compression:
         thresholdPercent: 75
         preserveRecentTurns: 4
@@ -32,6 +36,32 @@ spec:
         summaryTokens: 256
         maxTokens: 1024
 ```
+
+## Tool Result Sandboxing
+
+When `sandbox` is set, tool results exceeding `thresholdBytes` are stored in a per-task in-memory sandbox and replaced with a compact digest. The LLM receives a summary like:
+
+```
+[sandboxed: result-3]
+tool: github__search_code
+size: 47,832 bytes (~11,958 tokens saved)
+preview (truncated): {"total_count":142,"items":[{"name":"controller.go",...
+Use sandbox_recall(id="result-3") to retrieve the full result.
+```
+
+The model can call the built-in `sandbox_recall` tool to retrieve the full result when needed. In practice, models often extract what they need from the preview alone - measured **53% token reduction** on 7KB tool results with identical output quality.
+
+| Field            | Default    | Description                                              |
+| ---------------- | ---------- | -------------------------------------------------------- |
+| `thresholdBytes` | 2048       | Minimum result size (bytes) to trigger sandboxing        |
+| `previewBytes`   | 200        | Bytes included in the digest preview (UTF-8 safe)        |
+| `maxTotalBytes`  | 52428800   | Cap on total sandbox memory (50MB). Fail-open on exceed  |
+
+Results under the threshold pass through unchanged. The sandbox is ephemeral - discarded when the task completes.
+
+:::tip When to enable sandbox
+Enable sandbox for agents that call tools returning large payloads (search results, database queries, API responses). For agents with small tool results (<2KB), sandboxing adds no value.
+:::
 
 ## Semantic Dedup
 
