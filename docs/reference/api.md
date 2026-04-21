@@ -340,7 +340,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `inline` _string_ | Inline is the system prompt text written directly in the manifest.<br />For long or frequently-iterated prompts prefer from. |  | Optional: true <br /> |
+| `inline` _string_ | Inline is the system prompt text written directly in the manifest.<br />Mutually exclusive with From. |  | Optional: true <br /> |
 | `from` _[SystemPromptSource](#systempromptsource)_ | From references a ConfigMap or Secret key whose content is used as the system prompt.<br />Updating the referenced object triggers an automatic rolling restart of agent pods. |  | Optional: true <br /> |
 
 
@@ -2449,7 +2449,8 @@ _Appears in:_
 | `prompt` _string_ | Prompt is the task text submitted to the agent for a standalone run.<br />Required when Agent is set. |  | Optional: true <br /> |
 | `teamGeneration` _integer_ | TeamGeneration is the SwarmTeam spec.generation at the time this run was<br />created. Allows correlating a run with the exact team spec that was in effect.<br />Only set for team runs. |  | Optional: true <br /> |
 | `input` _object (keys:string, values:string)_ | Input is the resolved input map for this run: team default inputs merged with<br />any per-trigger overrides supplied via swarm trigger --input or SwarmEvent.<br />Step inputs reference these values via "\{\{ .input.&lt;key&gt; \}\}". |  | Optional: true <br /> |
-| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline is a snapshot of the SwarmTeam pipeline DAG at trigger time.<br />Empty for routed-mode runs. |  | MaxItems: 100 <br />Optional: true <br /> |
+| `entry` _string_ | Entry is the name of the entry role for dynamic-mode teams.<br />Snapshotted from the parent SwarmTeam at trigger time.<br />When set with an empty Pipeline and no Routing, the run operates in<br />dynamic mode: the entry role receives the prompt and may delegate to<br />other roles via delegate() at runtime. |  | Optional: true <br /> |
+| `pipeline` _[SwarmTeamPipelineStep](#swarmteampipelinestep) array_ | Pipeline is a snapshot of the SwarmTeam pipeline DAG at trigger time.<br />Empty for routed-mode and dynamic-mode runs. |  | MaxItems: 100 <br />Optional: true <br /> |
 | `defaultContextPolicy` _[StepContextPolicy](#stepcontextpolicy)_ | DefaultContextPolicy is a snapshot of the team's defaultContextPolicy at trigger time.<br />Applied to non-adjacent step references; per-step contextPolicy takes precedence. |  | Optional: true <br /> |
 | `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles is a snapshot of the SwarmTeam role definitions at trigger time.<br />Empty for routed-mode runs. |  | MaxItems: 50 <br />Optional: true <br /> |
 | `output` _string_ | Output is a Go template expression that selects the final run result.<br />Example: "\{\{ .steps.summarize.output \}\}"<br />For routed-mode runs this defaults to "\{\{ .steps.route.output \}\}" at trigger time. |  | Optional: true <br /> |
@@ -3091,7 +3092,6 @@ _Appears in:_
 
 
 WebhookToolSpec defines an inline HTTP tool available to the agent without a full MCP server.
-Use for simple single-endpoint callbacks. For rich integrations prefer an MCP server.
 
 
 
