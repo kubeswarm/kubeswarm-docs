@@ -104,7 +104,7 @@ Each subtask is a separate task execution that consumes tokens from the agent's 
 
 ## Example
 
-See [cookbook recipe 07 - Parallel Fan-Out](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/07-parallel-fan-out) for a complete working example with a coordinator agent that fans out competitive research to worker replicas.
+See [cookbook recipe 02 - Pipeline Team](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/recipes/02-pipeline-team) for a pipeline example and [recipe 03 - Dynamic Delegation](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/recipes/03-dynamic-delegation) for runtime fan-out via delegation.
 
 ## Limitations
 

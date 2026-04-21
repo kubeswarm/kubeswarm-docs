@@ -60,7 +60,7 @@ spec:
 
 The coordinator calls `spawn_and_collect` with multiple prompts. Each subtask lands on the researcher's queue, where available replicas pick them up in parallel. Results are collected back into the coordinator's loop.
 
-See [Parallel Fan-Out](/orchestration/parallel-fan-out) for details and [cookbook recipe 07](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/07-parallel-fan-out) for a working example.
+See [Parallel Fan-Out](/orchestration/parallel-fan-out) for details and [cookbook recipe 03 - Dynamic Delegation](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/recipes/03-dynamic-delegation) for a working example.
 
 ## Routed Mode {#routed}
 

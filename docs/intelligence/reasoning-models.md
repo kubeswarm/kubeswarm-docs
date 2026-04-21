@@ -161,13 +161,10 @@ For multi-turn steps (tool-use loops), `ThinkingTokens` is the sum across all tu
 - kubeswarm detects this field and estimates thinking tokens from it (chars/4 approximation) when the standard `completion_tokens_details.reasoning_tokens` is zero.
 - No configuration needed - the fallback is automatic for any OpenAI-compatible server that returns a `reasoning` field.
 
-## Cookbook examples
+## Related recipes
 
-See the [09-reasoning-models](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/09-reasoning-models) cookbook for ready-to-use examples:
-
-- **[minimal](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/09-reasoning-models/minimal)** - smallest possible reasoning opt-in
-- **[budgets](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/09-reasoning-models/budgets)** - per-call thinking and answer caps
-- **[crossprovider](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/teams/09-reasoning-models/crossprovider)** - same YAML for Anthropic and OpenAI
+- [08 - Budget and Policy](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/recipes/08-budget-and-policy) - thinking and answer token caps via SwarmPolicy
+- [01 - Standalone Agent](https://github.com/kubeswarm/kubeswarm-cookbook/tree/main/recipes/01-standalone-agent) - basic agent setup (add `reasoning:` block to enable)
 
 ## Design reference
 
