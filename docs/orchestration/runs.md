@@ -86,3 +86,18 @@ kubectl get swrun -w
 kubectl get swrun my-run -o jsonpath='{.status.output}'
 kubectl describe swrun my-run
 ```
+
+### Search runs
+
+Search-mode runs store the full tree in `status.searchTree`:
+
+```bash
+# View tree nodes with scores and phases
+kubectl get swrun my-search -o jsonpath='{.status.searchTree.nodes}' | \
+  jq '.[] | {id, depth, phase, scoreMillis, task}'
+
+# Check why the search terminated
+kubectl get swrun my-search -o jsonpath='{.status.searchTree.terminationReason}'
+```
+
+See [Search Mode](/orchestration/search) for the full configuration reference.

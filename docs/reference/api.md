@@ -1640,6 +1640,121 @@ _Appears in:_
 | `cluster-wide` | RegistryScopeCluster indexes all SwarmAgents cluster-wide. Requires a ClusterRole<br />that grants cross-namespace SwarmAgent reads.<br /> |
 
 
+
+
+#### SearchNodePhase
+
+_Underlying type:_ _string_
+
+SearchNodePhase tracks the lifecycle of a single search tree node.
+
+_Validation:_
+- Enum: [Pending Running Scored Pruned EvalFailed Solution]
+
+_Appears in:_
+- [SearchNodeStatus](#searchnodestatus)
+
+| Field | Description |
+| --- | --- |
+| `Pending` |  |
+| `Running` |  |
+| `Scored` |  |
+| `Pruned` |  |
+| `EvalFailed` |  |
+| `Solution` |  |
+
+
+
+
+#### SearchNodeStatus
+
+
+
+SearchNodeStatus records the state of a single search tree node.
+Stored in SwarmRun status (Phase 2).
+
+
+
+_Appears in:_
+- [SearchTreeStatus](#searchtreestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `id` _integer_ | ID is the zero-based index of this node in the tree. |  |  |
+| `parentID` _integer_ | ParentID is the ID of the parent node. Nil for the root node. |  |  |
+| `depth` _integer_ | Depth is the tree depth of this node (root = 0). |  |  |
+| `task` _string_ | Task is the task description assigned to this node. |  |  |
+| `output` _string_ | Output is the executor's response for this node. |  |  |
+| `scoreMillis` _integer_ | ScoreMillis is the quality score (0-1000) assigned by the evaluator or planner. |  | Maximum: 1000 <br />Minimum: 0 <br /> |
+| `scoreReasoning` _string_ | ScoreReasoning is the evaluator's explanation for the score. |  |  |
+| `phase` _[SearchNodePhase](#searchnodephase)_ | Phase tracks this node's lifecycle. |  | Enum: [Pending Running Scored Pruned EvalFailed Solution] <br /> |
+| `taskID` _string_ | TaskID is the queue task ID for the in-flight executor or evaluator call.<br />Empty when the node is not waiting for a result. |  | Optional: true <br /> |
+| `tokenUsage` _[TokenUsage](#tokenusage)_ | TokenUsage records tokens consumed by the executor for this node. |  |  |
+
+
+#### SearchStrategy
+
+_Underlying type:_ _string_
+
+SearchStrategy selects the tree exploration algorithm.
+
+_Validation:_
+- Enum: [BFS BeamSearch]
+
+_Appears in:_
+- [SwarmTeamSearchSpec](#swarmteamsearchspec)
+
+| Field | Description |
+| --- | --- |
+| `BFS` |  |
+| `BeamSearch` |  |
+
+
+#### SearchTerminationReason
+
+_Underlying type:_ _string_
+
+SearchTerminationReason explains why the search stopped.
+
+_Validation:_
+- Enum: [MinScoreReached MaxDepthReached MaxNodesReached MaxIterationsReached BudgetExhausted PlannerConverged PlannerFailure SearchCancelled]
+
+_Appears in:_
+- [SearchTreeStatus](#searchtreestatus)
+
+| Field | Description |
+| --- | --- |
+| `MinScoreReached` |  |
+| `MaxDepthReached` |  |
+| `MaxNodesReached` |  |
+| `MaxIterationsReached` |  |
+| `BudgetExhausted` |  |
+| `PlannerConverged` |  |
+| `PlannerFailure` |  |
+| `SearchCancelled` |  |
+
+
+#### SearchTreeStatus
+
+
+
+SearchTreeStatus captures the full state of a search tree.
+Stored in SwarmRun status (Phase 2).
+
+
+
+_Appears in:_
+- [SwarmRunStatus](#swarmrunstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `nodes` _[SearchNodeStatus](#searchnodestatus) array_ | Nodes is the ordered list of all tree nodes. |  |  |
+| `iterations` _integer_ | Iterations is the number of planner invocations completed so far. |  |  |
+| `solutionNodeID` _integer_ | SolutionNodeID is the ID of the node selected as the final answer. |  |  |
+| `terminationReason` _[SearchTerminationReason](#searchterminationreason)_ | TerminationReason explains why the search stopped. |  | Enum: [MinScoreReached MaxDepthReached MaxNodesReached MaxIterationsReached BudgetExhausted PlannerConverged PlannerFailure SearchCancelled] <br /> |
+| `lastPlannerIteration` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | LastPlannerIteration is the timestamp of the most recent planner invocation. |  |  |
+
+
 #### SlackChannelSpec
 
 
@@ -2455,6 +2570,7 @@ _Appears in:_
 | `roles` _[SwarmTeamRole](#swarmteamrole) array_ | Roles is a snapshot of the SwarmTeam role definitions at trigger time.<br />Empty for routed-mode runs. |  | MaxItems: 50 <br />Optional: true <br /> |
 | `output` _string_ | Output is a Go template expression that selects the final run result.<br />Example: "\{\{ .steps.summarize.output \}\}"<br />For routed-mode runs this defaults to "\{\{ .steps.route.output \}\}" at trigger time. |  | Optional: true <br /> |
 | `routing` _[SwarmTeamRoutingSpec](#swarmteamroutingspec)_ | Routing is a snapshot of the SwarmTeam routing config at trigger time.<br />Set when the team operates in routed mode. Mutually exclusive with Pipeline. |  | Optional: true <br /> |
+| `search` _[SwarmTeamSearchSpec](#swarmteamsearchspec)_ | Search is a snapshot of the SwarmTeam search config at trigger time.<br />Set when the team operates in search mode. Mutually exclusive with Pipeline and Routing. |  | Optional: true <br /> |
 | `timeoutSeconds` _integer_ | TimeoutSeconds is the maximum wall-clock seconds this run may take.<br />Zero means no timeout. |  | Minimum: 1 <br />Optional: true <br /> |
 | `maxTokens` _integer_ | MaxTokens is the total token budget for this run across all steps.<br />Zero means no limit. |  | Minimum: 1 <br />Optional: true <br /> |
 
@@ -2479,6 +2595,7 @@ _Appears in:_
 | `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#time-v1-meta)_ | CompletionTime is when this run reached a terminal phase (Succeeded or Failed). |  |  |
 | `totalTokenUsage` _[TokenUsage](#tokenusage)_ | TotalTokenUsage is the sum of token usage across all steps in this run. |  |  |
 | `totalCostUSD` _string_ | TotalCostUSD is the estimated total dollar cost of this run, summed across<br />all steps using the operator's configured CostProvider. Decimal string. |  |  |
+| `searchTree` _[SearchTreeStatus](#searchtreestatus)_ | SearchTree holds the search tree state for search-mode runs.<br />Only populated when spec.search is set. |  | Optional: true <br /> |
 | `observedGeneration` _integer_ | ObservedGeneration is the .metadata.generation this status reflects. |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions reflect the current state of the SwarmRun. |  |  |
 
@@ -2798,11 +2915,46 @@ _Appears in:_
 | `afterSeconds` _integer_ | AfterSeconds is how long a role must be idle (no active steps) before it is scaled to zero.<br />Minimum 30. Defaults to 300 (5 minutes). | 300 | Minimum: 30 <br />Optional: true <br /> |
 
 
+#### SwarmTeamSearchSpec
+
+
+
+SwarmTeamSearchSpec configures search tree orchestration mode.
+
+
+
+_Appears in:_
+- [SwarmRunSpec](#swarmrunspec)
+- [SwarmTeamSpec](#swarmteamspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `strategy` _[SearchStrategy](#searchstrategy)_ | Strategy selects the tree exploration algorithm. |  | Enum: [BFS BeamSearch] <br />Required: true <br /> |
+| `plannerRole` _string_ | PlannerRole is the role name of the agent that decides branching/pruning. |  | MinLength: 1 <br />Required: true <br /> |
+| `executorRole` _string_ | ExecutorRole is the role name of the agent that executes each node task. |  | MinLength: 1 <br />Required: true <br /> |
+| `evaluatorRole` _string_ | EvaluatorRole is the role name of the agent that scores node outputs.<br />When omitted, the planner must include scoreMillis in expand/converge actions.<br />Required when strategy is BeamSearch. |  | Optional: true <br /> |
+| `initialPrompt` _string_ | InitialPrompt is the root task description. Go template with .input access. |  | Required: true <br /> |
+| `minScorePercent` _integer_ | MinScorePercent is the quality threshold (0-100). A node scoring above<br />this percent (mapped to millis internally) triggers convergence. |  | Maximum: 100 <br />Minimum: 0 <br />Optional: true <br /> |
+| `maxDepth` _integer_ | MaxDepth limits the tree depth. 0 means no limit. | 10 | Minimum: 0 <br />Optional: true <br /> |
+| `maxNodes` _integer_ | MaxNodes limits the total number of tree nodes. Budget protection.<br />Hard-capped at 200 to stay within etcd value size limits. | 50 | Maximum: 200 <br />Minimum: 1 <br />Optional: true <br /> |
+| `maxOutputBytes` _integer_ | MaxOutputBytes limits the size of each node's output and task fields.<br />Default 4096. With MaxNodes=200, worst case is 200*4KB = 800KB (safe for etcd). | 4096 | Maximum: 16384 <br />Minimum: 256 <br />Optional: true <br /> |
+| `maxIterations` _integer_ | MaxIterations limits planner invocations. 0 means no limit. | 20 | Minimum: 0 <br />Optional: true <br /> |
+| `maxParallel` _integer_ | MaxParallel is the maximum concurrent executor tasks per level. | 3 | Minimum: 1 <br />Optional: true <br /> |
+| `beamWidth` _integer_ | BeamWidth is the number of top-scoring nodes kept per depth level.<br />Only used when strategy is BeamSearch. Defaults to 3 at runtime when<br />strategy is BeamSearch and beamWidth is not set. No CRD default so<br />the CEL mutual exclusion rule can distinguish "not set" from "set". |  | Minimum: 1 <br />Optional: true <br /> |
+| `maxPlannerRetries` _integer_ | MaxPlannerRetries is the number of retry attempts when the planner<br />produces invalid JSON output. | 2 | Minimum: 0 <br />Optional: true <br /> |
+| `maxEvaluatorRetries` _integer_ | MaxEvaluatorRetries is the number of retry attempts when the evaluator<br />produces unparseable output. After exhaustion, the node is marked EvalFailed. | 2 | Minimum: 0 <br />Optional: true <br /> |
+| `stagnationThreshold` _integer_ | StagnationThreshold is the number of consecutive planner iterations without<br />improvement to the best score before a StagnationDetected event is emitted. | 5 | Minimum: 1 <br />Optional: true <br /> |
+| `plannerTimeoutSeconds` _integer_ | PlannerTimeoutSeconds is the maximum age (in seconds) of lastPlannerIteration<br />before the reconciler considers the planner stale and re-invokes it. | 120 | Minimum: 10 <br />Optional: true <br /> |
+
+
 #### SwarmTeamSpec
 
 
 
 SwarmTeamSpec defines the desired state of SwarmTeam.
+NOTE: plannerRole, executorRole, and evaluatorRole existence checks are
+performed in the admission webhook (ValidateSearchConfig) instead of CEL
+because roles.exists() traversal exceeds the CRD CEL cost budget.
 
 
 
@@ -2830,6 +2982,7 @@ _Appears in:_
 | `artifactStore` _[ArtifactStoreSpec](#artifactstorespec)_ | ArtifactStore configures where pipeline file artifacts are stored.<br />When unset, file artifact support is disabled and any OutputArtifacts<br />declarations on pipeline steps are ignored. |  | Optional: true <br /> |
 | `autoscaling` _[SwarmTeamAutoscaling](#swarmteamautoscaling)_ | Autoscaling configures demand-driven replica scaling for this team's inline agents.<br />When enabled, the operator scales each role's managed SwarmAgent between 0 and its<br />configured replica count based on the number of active pipeline steps for that role.<br />Only applies to inline roles (those with model+systemPrompt); external SwarmAgent references<br />are not scaled by the team controller. |  | Optional: true <br /> |
 | `routing` _[SwarmTeamRoutingSpec](#swarmteamroutingspec)_ | Routing configures routed mode. When set, the team operates in routed mode:<br />tasks are dispatched automatically via an LLM router call against SwarmRegistry.<br />Mutually exclusive with spec.pipeline and spec.roles. |  | Optional: true <br /> |
+| `search` _[SwarmTeamSearchSpec](#swarmteamsearchspec)_ | Search configures search tree orchestration mode.<br />Mutually exclusive with Pipeline and Routing. |  | Optional: true <br /> |
 
 
 #### SwarmTeamStatus
@@ -2901,6 +3054,7 @@ TokenUsage records the number of tokens consumed by a single step or the whole p
 
 _Appears in:_
 - [PipelineStepStatus](#pipelinestepstatus)
+- [SearchNodeStatus](#searchnodestatus)
 - [SwarmAgentStatus](#swarmagentstatus)
 - [SwarmRunStatus](#swarmrunstatus)
 
