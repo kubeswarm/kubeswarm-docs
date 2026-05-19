@@ -2,12 +2,12 @@
 sidebar_position: 1
 sidebar_label: "Orchestration"
 slug: /orchestration/overview
-description: "kubeswarm orchestration modes - pipeline DAG, dynamic delegation and LLM-routed dispatch for agent teams on Kubernetes."
+description: "kubeswarm orchestration modes - pipeline DAG, dynamic delegation, LLM-routed dispatch and tree search for agent teams on Kubernetes."
 ---
 
 # Orchestration
 
-A kubeswarm SwarmTeam composes multiple AI agents into a workflow on Kubernetes. Three execution modes let you choose the right orchestration pattern for your use case.
+A kubeswarm SwarmTeam composes multiple AI agents into a workflow on Kubernetes. Four execution modes let you choose the right orchestration pattern for your use case.
 
 ## Pipeline Mode {#pipeline}
 
@@ -76,6 +76,29 @@ spec:
 ```
 
 No pipeline, no roles - the team adapts to what each request needs.
+
+## Search Mode {#search}
+
+A tree search where a planner agent explores multiple approaches, an evaluator scores each one, and weak branches are pruned. BFS and BeamSearch strategies with declarative convergence criteria.
+
+```yaml
+spec:
+  roles:
+    - name: planner
+      model: claude-sonnet-4-6
+    - name: worker
+      model: claude-sonnet-4-6
+
+  search:
+    strategy: BFS
+    plannerRole: planner
+    executorRole: worker
+    initialPrompt: "{{ .input.problem }}"
+    minScorePercent: 85
+    maxDepth: 3
+```
+
+The planner sees the current tree state and outputs structured actions: expand (create branches), prune (kill dead ends), converge (declare a winner). See [Search Mode](/orchestration/search) for details.
 
 ## Execution Records
 
